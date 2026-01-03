@@ -1,0 +1,17 @@
+# Zig cache and build artifacts
+.zig-cache/
+zig-out/
+
+# Zig compiler
+zig-linux-x86_64-*/
+zig.tar.xz
+
+# Runtime files
+*.aof
+nubdb.aof
+bench.aof
+bench_test.aof
+
+# Temporary files
+/tmp/
+*.tmp
