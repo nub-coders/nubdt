@@ -91,7 +91,9 @@ docker-shell:
 compose-up:
 	docker network create web 2>/dev/null || true
 	docker-compose up -d
-	@echo "NubDB started with docker-compose on 'web' network"
+	@echo "NubDB started on 'web' network"
+	@echo "  - Database: localhost:6379"
+	@echo "  - Documentation: http://localhost:8080"
 	@sleep 2
 	@docker-compose logs
 
@@ -127,15 +129,20 @@ k8s-port-forward:
 docs-build:
 	docker build -f Dockerfile.docs -t nubdb-docs:latest .
 
-docs-run: docs-build
-	docker-compose -f docker-compose.docs.yml up -d
-	@echo "Documentation running at http://localhost (via proxy)"
+docs-run:
+	docker-compose up -d nubdb-docs
+	@echo "Documentation running:"
+	@echo "  - Direct: http://localhost:8080"
+	@echo "  - Proxy: https://db.nubcoder.com (if configured)"
 
 docs-stop:
-	docker-compose -f docker-compose.docs.yml down
+	docker-compose stop nubdb-docs
 
 docs-logs:
-	docker logs -f nubdb-docs
+	docker-compose logs -f nubdb-docs
+
+docs-restart:
+	docker-compose restart nubdb-docs
 
 docs-test: docs-build
 	docker run -d --name nubdb-docs-test -p 8888:80 nubdb-docs:latest
@@ -147,11 +154,14 @@ docs-test: docs-build
 # Full stack
 full-stack:
 	docker network create web 2>/dev/null || true
-	docker-compose -f docker-compose.full.yml up -d
-	@echo "Full stack running: Database + Documentation"
+	docker-compose up -d
+	@echo "Full stack running:"
+	@echo "  - Database: localhost:6379"
+	@echo "  - Documentation: http://localhost:8080"
+	@echo "  - Documentation (SSL): https://db.nubcoder.com"
 
 full-stack-down:
-	docker-compose -f docker-compose.full.yml down
+	docker-compose down
 
 # Utility targets
 benchmark: build
