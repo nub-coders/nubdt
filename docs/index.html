@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="NubDB - High-Performance AOF Database in Zig">
+    <title>NubDB - High-Performance Database Documentation</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span class="logo">⚡ NubDB</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#quick-start">Quick Start</a></li>
+                <li><a href="#docker">Docker</a></li>
+                <li><a href="#api">API</a></li>
+                <li><a href="#examples">Examples</a></li>
+                <li><a href="https://github.com/nub-coders/nubdt" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>⚡ NubDB</h1>
+            <p class="subtitle">High-Performance AOF Database in Zig</p>
+            <p class="description">A blazing-fast, AOF-based in-memory database optimized for maximum throughput and minimal latency.</p>
+            <div class="hero-buttons">
+                <a href="#quick-start" class="btn btn-primary">Get Started</a>
+                <a href="https://github.com/nub-coders/nubdt" class="btn btn-secondary" target="_blank">View on GitHub</a>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">100K+</div>
+                    <div class="stat-label">ops/second</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">&lt;5µs</div>
+                    <div class="stat-label">SET latency</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">&lt;1µs</div>
+                    <div class="stat-label">GET latency</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">12.8MB</div>
+                    <div class="stat-label">Docker image</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="section">
+        <div class="container">
+            <h2>Features</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Lightning Fast</h3>
+                    <p>100K+ ops/second with sub-microsecond latency. Robin Hood hashing for O(1) lookups.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3>AOF Persistence</h3>
+                    <p>Append-Only File for crash recovery and durability with background compaction.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🐳</div>
+                    <h3>Docker Ready</h3>
+                    <p>Production-ready Docker images with web network integration and service discovery.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Thread Safe</h3>
+                    <p>RwLock for concurrent reads, lock-free operations, atomic counters.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⏱️</div>
+                    <h3>TTL Support</h3>
+                    <p>Automatic key expiration with lazy cleanup and periodic garbage collection.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">☸️</div>
+                    <h3>Kubernetes</h3>
+                    <p>Complete K8s manifests for production deployments with PVC support.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>TCP Server</h3>
+                    <p>Multi-threaded TCP server mode with persistent connections.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔧</div>
+                    <h3>Atomic Ops</h3>
+                    <p>INCR/DECR operations with integer values for counters.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section id="quick-start" class="section bg-dark">
+        <div class="container">
+            <h2>Quick Start</h2>
+            
+            <div class="tabs">
+                <button class="tab-button active" onclick="showTab('docker')">Docker</button>
+                <button class="tab-button" onclick="showTab('compose')">Docker Compose</button>
+                <button class="tab-button" onclick="showTab('source')">From Source</button>
+                <button class="tab-button" onclick="showTab('kubernetes')">Kubernetes</button>
+            </div>
+
+            <div id="docker" class="tab-content active">
+                <h3>Using Docker</h3>
+                <pre><code class="language-bash"># Create web network
+docker network create web
+
+# Run NubDB
+docker run -d \
+  --name nubdb-server \
+  --network web \
+  -p 6379:6379 \
+  -v nubdb-data:/data \
+  nubdb:latest
+
+# Test connection
+echo "SET hello world" | nc localhost 6379</code></pre>
+            </div>
+
+            <div id="compose" class="tab-content">
+                <h3>Using Docker Compose</h3>
+                <pre><code class="language-bash"># Create network
+docker network create web
+
+# Start NubDB
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Test connection
+echo "GET hello" | nc localhost 6379</code></pre>
+            </div>
+
+            <div id="source" class="tab-content">
+                <h3>Build from Source</h3>
+                <pre><code class="language-bash"># Clone repository
+git clone https://github.com/nub-coders/nubdt.git
+cd nubdt
+
+# Build
+make build
+
+# Run in server mode
+make server
+
+# Or use zig directly
+zig build -Doptimize=ReleaseFast
+./zig-out/bin/nubdt --server</code></pre>
+            </div>
+
+            <div id="kubernetes" class="tab-content">
+                <h3>Deploy to Kubernetes</h3>
+                <pre><code class="language-bash"># Apply manifests
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/deployment.yaml
+
+# Check status
+kubectl get pods -n nubdb
+
+# Port forward
+kubectl port-forward -n nubdb svc/nubdb-service 6379:6379</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Docker Integration Section -->
+    <section id="docker" class="section">
+        <div class="container">
+            <h2>Docker Integration</h2>
+            <div class="docker-info">
+                <div class="info-card">
+                    <h3>🌐 Web Network</h3>
+                    <p>NubDB uses Docker's external web network for service discovery:</p>
+                    <pre><code class="language-yaml">networks:
+  web:
+    external: true
+
+services:
+  nubdb:
+    container_name: nubdb-server
+    networks:
+      - web</code></pre>
+                    <p class="highlight">Connect from other containers: <code>nubdb-server:6379</code></p>
+                </div>
+
+                <div class="info-card">
+                    <h3>🔗 Multi-Service Architecture</h3>
+                    <pre><code class="language-bash"># Start your app on the same network
+docker run -d \
+  --network web \
+  -e DB_HOST=nubdb-server \
+  -e DB_PORT=6379 \
+  your-app:latest</code></pre>
+                </div>
+
+                <div class="info-card">
+                    <h3>📦 Image Details</h3>
+                    <ul>
+                        <li><strong>Size:</strong> 12.8MB (Alpine-based)</li>
+                        <li><strong>Architecture:</strong> Multi-stage build</li>
+                        <li><strong>Security:</strong> Non-root user (uid 1000)</li>
+                        <li><strong>Health Checks:</strong> Automatic monitoring</li>
+                        <li><strong>Persistence:</strong> Volume support for AOF</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- API Reference Section -->
+    <section id="api" class="section bg-dark">
+        <div class="container">
+            <h2>API Reference</h2>
+            
+            <div class="api-commands">
+                <div class="command-card">
+                    <h3>SET</h3>
+                    <p class="command-syntax">SET key value [ttl]</p>
+                    <p>Store a key-value pair with optional TTL (seconds)</p>
+                    <pre><code class="language-bash">SET mykey "Hello, World!"
+SET counter 100 60  # Expires in 60 seconds</code></pre>
+                    <div class="command-response">Response: <code>OK</code></div>
+                </div>
+
+                <div class="command-card">
+                    <h3>GET</h3>
+                    <p class="command-syntax">GET key</p>
+                    <p>Retrieve value by key</p>
+                    <pre><code class="language-bash">GET mykey</code></pre>
+                    <div class="command-response">Response: <code>"Hello, World!"</code> or <code>(nil)</code></div>
+                </div>
+
+                <div class="command-card">
+                    <h3>DELETE</h3>
+                    <p class="command-syntax">DELETE key</p>
+                    <p>Remove a key from the database</p>
+                    <pre><code class="language-bash">DELETE mykey</code></pre>
+                    <div class="command-response">Response: <code>OK</code> or <code>(not found)</code></div>
+                </div>
+
+                <div class="command-card">
+                    <h3>EXISTS</h3>
+                    <p class="command-syntax">EXISTS key</p>
+                    <p>Check if key exists</p>
+                    <pre><code class="language-bash">EXISTS mykey</code></pre>
+                    <div class="command-response">Response: <code>1</code> (exists) or <code>0</code> (not found)</div>
+                </div>
+
+                <div class="command-card">
+                    <h3>INCR</h3>
+                    <p class="command-syntax">INCR key</p>
+                    <p>Increment integer value by 1</p>
+                    <pre><code class="language-bash">INCR counter</code></pre>
+                    <div class="command-response">Response: New value (integer)</div>
+                </div>
+
+                <div class="command-card">
+                    <h3>DECR</h3>
+                    <p class="command-syntax">DECR key</p>
+                    <p>Decrement integer value by 1</p>
+                    <pre><code class="language-bash">DECR counter</code></pre>
+                    <div class="command-response">Response: New value (integer)</div>
+                </div>
+
+                <div class="command-card">
+                    <h3>SIZE</h3>
+                    <p class="command-syntax">SIZE</p>
+                    <p>Get number of keys in database</p>
+                    <pre><code class="language-bash">SIZE</code></pre>
+                    <div class="command-response">Response: <code>N keys</code></div>
+                </div>
+
+                <div class="command-card">
+                    <h3>CLEAR</h3>
+                    <p class="command-syntax">CLEAR</p>
+                    <p>Delete all keys from database</p>
+                    <pre><code class="language-bash">CLEAR</code></pre>
+                    <div class="command-response">Response: <code>OK</code></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Examples Section -->
+    <section id="examples" class="section">
+        <div class="container">
+            <h2>Code Examples</h2>
+            
+            <div class="example-tabs">
+                <button class="example-tab active" onclick="showExample('python')">Python</button>
+                <button class="example-tab" onclick="showExample('nodejs')">Node.js</button>
+                <button class="example-tab" onclick="showExample('go')">Go</button>
+                <button class="example-tab" onclick="showExample('rust')">Rust</button>
+            </div>
+
+            <div id="python" class="example-content active">
+                <h3>Python Client</h3>
+                <pre><code class="language-python">import socket
+
+class NubDBClient:
+    def __init__(self, host='nubdb-server', port=6379):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.connect((host, port))
+    
+    def set(self, key, value):
+        cmd = f"SET {key} {value}\n"
+        self.sock.sendall(cmd.encode())
+        return self.sock.recv(1024).decode().strip()
+    
+    def get(self, key):
+        cmd = f"GET {key}\n"
+        self.sock.sendall(cmd.encode())
+        return self.sock.recv(1024).decode().strip()
+
+# Usage
+client = NubDBClient()
+client.set('greeting', 'Hello from Python!')
+result = client.get('greeting')
+print(result)  # "Hello from Python!"</code></pre>
+            </div>
+
+            <div id="nodejs" class="example-content">
+                <h3>Node.js Client</h3>
+                <pre><code class="language-javascript">const net = require('net');
+
+class NubDBClient {
+    constructor(host = 'nubdb-server', port = 6379) {
+        this.client = net.createConnection({ host, port });
+    }
+
+    set(key, value) {
+        return new Promise((resolve) => {
+            this.client.write(`SET ${key} ${value}\n`);
+            this.client.once('data', (data) => {
+                resolve(data.toString().trim());
+            });
+        });
+    }
+
+    get(key) {
+        return new Promise((resolve) => {
+            this.client.write(`GET ${key}\n`);
+            this.client.once('data', (data) => {
+                resolve(data.toString().trim());
+            });
+        });
+    }
+}
+
+// Usage
+const client = new NubDBClient();
+await client.set('greeting', 'Hello from Node.js!');
+const result = await client.get('greeting');
+console.log(result);  // "Hello from Node.js!"</code></pre>
+            </div>
+
+            <div id="go" class="example-content">
+                <h3>Go Client</h3>
+                <pre><code class="language-go">package main
+
+import (
+    "bufio"
+    "fmt"
+    "net"
+)
+
+type NubDBClient struct {
+    conn net.Conn
+}
+
+func NewClient(host string, port string) (*NubDBClient, error) {
+    conn, err := net.Dial("tcp", host+":"+port)
+    if err != nil {
+        return nil, err
+    }
+    return &NubDBClient{conn: conn}, nil
+}
+
+func (c *NubDBClient) Set(key, value string) (string, error) {
+    cmd := fmt.Sprintf("SET %s %s\n", key, value)
+    _, err := c.conn.Write([]byte(cmd))
+    if err != nil {
+        return "", err
+    }
+    response, _ := bufio.NewReader(c.conn).ReadString('\n')
+    return response, nil
+}
+
+func main() {
+    client, _ := NewClient("nubdb-server", "6379")
+    result, _ := client.Set("greeting", "Hello from Go!")
+    fmt.Println(result)
+}</code></pre>
+            </div>
+
+            <div id="rust" class="example-content">
+                <h3>Rust Client</h3>
+                <pre><code class="language-rust">use std::io::{Read, Write};
+use std::net::TcpStream;
+
+struct NubDBClient {
+    stream: TcpStream,
+}
+
+impl NubDBClient {
+    fn new(host: &str, port: u16) -> std::io::Result&lt;Self&gt; {
+        let stream = TcpStream::connect((host, port))?;
+        Ok(NubDBClient { stream })
+    }
+
+    fn set(&mut self, key: &str, value: &str) -> std::io::Result&lt;String&gt; {
+        let cmd = format!("SET {} {}\n", key, value);
+        self.stream.write_all(cmd.as_bytes())?;
+        
+        let mut response = String::new();
+        self.stream.read_to_string(&mut response)?;
+        Ok(response.trim().to_string())
+    }
+}
+
+fn main() {
+    let mut client = NubDBClient::new("nubdb-server", 6379).unwrap();
+    let result = client.set("greeting", "Hello from Rust!").unwrap();
+    println!("{}", result);
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Performance Section -->
+    <section id="performance" class="section bg-dark">
+        <div class="container">
+            <h2>Performance Benchmarks</h2>
+            <div class="benchmark-grid">
+                <div class="benchmark-card">
+                    <h3>Sequential SET</h3>
+                    <div class="benchmark-value">200K+</div>
+                    <div class="benchmark-label">ops/second</div>
+                    <div class="benchmark-detail">Average latency: &lt;5µs</div>
+                </div>
+                <div class="benchmark-card">
+                    <h3>Sequential GET</h3>
+                    <div class="benchmark-value">1M+</div>
+                    <div class="benchmark-label">ops/second</div>
+                    <div class="benchmark-detail">Average latency: &lt;1µs</div>
+                </div>
+                <div class="benchmark-card">
+                    <h3>Mixed Workload</h3>
+                    <div class="benchmark-value">300K+</div>
+                    <div class="benchmark-label">ops/second</div>
+                    <div class="benchmark-detail">50% GET, 40% SET, 10% DELETE</div>
+                </div>
+                <div class="benchmark-card">
+                    <h3>AOF Replay</h3>
+                    <div class="benchmark-value">500K+</div>
+                    <div class="benchmark-label">ops/second</div>
+                    <div class="benchmark-detail">Fast crash recovery</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Latency Percentiles</h3>
+            <div class="latency-table">
+                <div class="latency-row">
+                    <div class="latency-percentile">p50</div>
+                    <div class="latency-value">&lt;3µs</div>
+                </div>
+                <div class="latency-row">
+                    <div class="latency-percentile">p95</div>
+                    <div class="latency-value">&lt;10µs</div>
+                </div>
+                <div class="latency-row">
+                    <div class="latency-percentile">p99</div>
+                    <div class="latency-value">&lt;20µs</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Resources Section -->
+    <section id="resources" class="section">
+        <div class="container">
+            <h2>Resources</h2>
+            <div class="resources-grid">
+                <a href="https://github.com/nub-coders/nubdt" class="resource-card" target="_blank">
+                    <h3>📚 GitHub Repository</h3>
+                    <p>Source code, issues, and contributions</p>
+                </a>
+                <a href="https://github.com/nub-coders/nubdt/blob/main/DOCKER.md" class="resource-card" target="_blank">
+                    <h3>🐳 Docker Guide</h3>
+                    <p>Complete Docker deployment documentation</p>
+                </a>
+                <a href="https://github.com/nub-coders/nubdt/blob/main/DOCKER_WEB_NETWORK.md" class="resource-card" target="_blank">
+                    <h3>🌐 Web Network Guide</h3>
+                    <p>Service discovery and networking</p>
+                </a>
+                <a href="https://github.com/nub-coders/nubdt/tree/main/k8s" class="resource-card" target="_blank">
+                    <h3>☸️ Kubernetes</h3>
+                    <p>K8s manifests and deployment guides</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 NubDB. Built with Zig. Open Source under MIT License.</p>
+            <p>
+                <a href="https://github.com/nub-coders/nubdt" target="_blank">GitHub</a> •
+                <a href="https://github.com/nub-coders/nubdt/issues" target="_blank">Issues</a> •
+                <a href="https://github.com/nub-coders/nubdt/blob/main/README.md" target="_blank">Documentation</a>
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
