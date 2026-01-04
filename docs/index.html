@@ -652,58 +652,126 @@ fn main() {
             <!-- Dashboard (shown after login) -->
             <div id="dashboard" class="dashboard" style="display: none;">
                 <h2>Welcome, <span id="userName"></span>! 🎉</h2>
-                <p class="form-subtitle">Your personal NubDB connection details</p>
+                <p class="form-subtitle">Manage your NubDB databases (Max: 3 databases)</p>
                 
-                <div class="dashboard-card">
-                    <h3>🔗 Connection URI</h3>
-                    <div class="uri-display">
-                        <code id="userUri">nubdb://user_xxxxx:token_xxxxx@db.nubcoder.com:6379/db_xxxxx</code>
-                        <button class="btn-copy" onclick="copyUri()">📋 Copy</button>
-                    </div>
-                </div>
-
-                <div class="dashboard-grid">
-                    <div class="info-card">
-                        <h4>📊 Database ID</h4>
-                        <p id="dbId" class="info-value">db_xxxxx</p>
-                    </div>
+                <!-- User Info Card -->
+                <div class="dashboard-grid" style="margin-bottom: 1.5rem;">
                     <div class="info-card">
                         <h4>👤 User ID</h4>
                         <p id="userId" class="info-value">user_xxxxx</p>
                     </div>
                     <div class="info-card">
-                        <h4>🔑 API Token</h4>
-                        <p id="apiToken" class="info-value">••••••••</p>
-                        <button class="btn-small" onclick="toggleToken()">👁️ Show</button>
-                    </div>
-                    <div class="info-card">
                         <h4>📦 Plan</h4>
                         <p class="info-value">Free Tier <span id="userCredits" class="credits-badge">20 credits</span></p>
-                        <small>100MB storage, 10K ops/day</small>
+                        <small>3 databases, 100MB each</small>
                     </div>
                 </div>
 
+                <!-- Databases Section -->
                 <div class="dashboard-card">
-                    <h3>📝 Quick Start with Your Database</h3>
-                    <div class="code-tabs">
-                        <button class="tab-btn active" onclick="showCode('python')">Python</button>
-                        <button class="tab-btn" onclick="showCode('node')">Node.js</button>
-                        <button class="tab-btn" onclick="showCode('curl')">cURL</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>🗄️ My Databases (<span id="dbCount">0</span>/3)</h3>
+                        <button class="btn btn-primary" onclick="showCreateDatabase()" id="createDbBtn">
+                            ➕ Create Database
+                        </button>
                     </div>
-                    <pre id="codeExample" class="code-example"><code class="language-python">from nubdb_client import NubDBClient
+                    
+                    <!-- Database List -->
+                    <div id="databaseList" class="database-list">
+                        <div class="empty-state">
+                            <p>🔍 No databases yet. Create your first database to get started!</p>
+                        </div>
+                    </div>
+                </div>
 
-# Your personal connection
-client = NubDBClient(uri="<span id="uriInCode1"></span>")
-
-# Start using your database
-client.set('greeting', 'Hello World!')
-print(client.get('greeting'))  # "Hello World!"</code></pre>
+                <!-- Create Database Form -->
+                <div id="createDatabaseForm" class="dashboard-card" style="display: none;">
+                    <h3>➕ Create New Database</h3>
+                    <form onsubmit="handleCreateDatabase(event)">
+                        <div class="form-group">
+                            <label for="dbUsername">Database Username</label>
+                            <input type="text" id="dbUsername" required placeholder="myapp_user" pattern="[a-zA-Z0-9_]{3,20}">
+                            <small style="color: #6b7280;">3-20 characters, letters, numbers, underscore only</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="dbPassword">Database Password</label>
+                            <input type="password" id="dbPassword" required placeholder="••••••••" minlength="8">
+                            <small style="color: #6b7280;">Minimum 8 characters</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="dbName">Database Name (Optional)</label>
+                            <input type="text" id="dbName" placeholder="My App Database">
+                            <small style="color: #6b7280;">Friendly name for identification</small>
+                        </div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="submit" class="btn btn-primary">Create Database</button>
+                            <button type="button" class="btn btn-secondary" onclick="cancelCreateDatabase()">Cancel</button>
+                        </div>
+                    </form>
                 </div>
 
                 <div class="dashboard-actions">
                     <button class="btn btn-secondary" onclick="showDocs()">📚 View Docs</button>
-                    <button class="btn btn-secondary" onclick="downloadConfig()">⬇️ Download Config</button>
+                    <button class="btn btn-secondary" onclick="downloadAllConfigs()">⬇️ Download All Configs</button>
                     <button class="btn btn-danger" onclick="handleLogout()">🚪 Logout</button>
+                </div>
+            </div>
+
+            <!-- Database Details Modal -->
+            <div id="dbDetailsModal" class="db-modal" style="display: none;">
+                <div class="db-modal-content">
+                    <span class="close" onclick="closeDbDetails()">&times;</span>
+                    <h3>🗄️ <span id="modalDbName">Database Details</span></h3>
+                    
+                    <div class="dashboard-card">
+                        <h4>🔗 Connection URI</h4>
+                        <div class="uri-display">
+                            <code id="modalDbUri">nubdb://username:password@db.nubcoder.com:6379/db_xxxxx</code>
+                            <button class="btn-copy" onclick="copyModalUri()">📋 Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="info-card">
+                            <h4>📊 Database ID</h4>
+                            <p id="modalDbId" class="info-value">db_xxxxx</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>👤 Username</h4>
+                            <p id="modalDbUsername" class="info-value">username</p>
+                        </div>
+                        <div class="info-card">
+                            <h4>🔑 Password</h4>
+                            <p id="modalDbPassword" class="info-value">••••••••</p>
+                            <button class="btn-small" onclick="toggleModalPassword()">👁️ Show</button>
+                        </div>
+                        <div class="info-card">
+                            <h4>📅 Created</h4>
+                            <p id="modalDbCreated" class="info-value">Just now</p>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h4>📝 Quick Start</h4>
+                        <div class="code-tabs">
+                            <button class="tab-btn active" onclick="showModalCode('python')">Python</button>
+                            <button class="tab-btn" onclick="showModalCode('node')">Node.js</button>
+                            <button class="tab-btn" onclick="showModalCode('curl')">cURL</button>
+                        </div>
+                        <pre id="modalCodeExample" class="code-example"><code class="language-python">from nubdb_client import NubDBClient
+
+# Connect to your database
+client = NubDBClient(uri="<span id="modalUriInCode"></span>")
+
+# Start using your database
+client.set('greeting', 'Hello World!')
+print(client.get('greeting'))  # "Hello World!"</code></pre>
+                    </div>
+
+                    <div class="dashboard-actions">
+                        <button class="btn btn-secondary" onclick="downloadDbConfig()">⬇️ Download Config</button>
+                        <button class="btn btn-danger" onclick="confirmDeleteDb()">🗑️ Delete Database</button>
+                    </div>
                 </div>
             </div>
         </div>
