@@ -145,7 +145,7 @@ docs-restart:
 	docker-compose restart nubdb-docs
 
 docs-test: docs-build
-	docker run -d --name nubdb-docs-test -p 8888:80 nubdb-docs:latest
+	docker run -d --name nubdb-docs-test -p 8888:8000 nubdb-docs:latest
 	@echo "Testing on http://localhost:8888"
 	@sleep 2
 	@curl -s http://localhost:8888/health && echo " - Health check OK"

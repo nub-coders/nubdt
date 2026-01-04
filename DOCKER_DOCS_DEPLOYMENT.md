@@ -5,6 +5,7 @@ This guide explains how to deploy the NubDB documentation website as a separate 
 ## Overview
 
 The documentation is served via Nginx in a separate container with:
+- Custom port 8000 (internal)
 - Custom domain support (db.nubcoder.com)
 - Automatic SSL via Let's Encrypt
 - Nginx Proxy Manager / Traefik compatible
@@ -12,29 +13,36 @@ The documentation is served via Nginx in a separate container with:
 - Security headers
 - Gzip compression
 
+## Port Configuration
+
+**Important**: Documentation runs on port **8000** internally (not 80) to avoid conflicts with other applications.
+
+- Internal port: 8000
+- External access: https://db.nubcoder.com (via reverse proxy)
+- Test port: 8888 (temporary, via `make docs-test`)
+
 ## Files
 
-- `Dockerfile.docs` - Documentation container build
-- `docs-nginx.conf` - Nginx configuration
-- `docker-compose.full.yml` - Complete stack (database + docs)
-- `docker-compose.docs.yml` - Documentation only
+- `Dockerfile.docs` - Documentation container build (port 8000)
+- `docs-nginx.conf` - Nginx configuration (listens on 8000)
+- `docker-compose.yml` - Complete stack (database + docs)
 
 ## Quick Start
 
-### Option 1: Full Stack (Database + Documentation)
+### Using Docker Compose
 
 ```bash
 # Create web network if not exists
 docker network create web
 
 # Start everything
-docker-compose -f docker-compose.full.yml up -d
+docker-compose up -d
 
 # View logs
-docker-compose -f docker-compose.full.yml logs -f
+docker-compose logs -f nubdb-docs
 ```
 
-### Option 2: Documentation Only
+### Manual Docker Run
 
 ```bash
 # Build documentation image
@@ -45,16 +53,11 @@ docker run -d \
   --name nubdb-docs \
   --network web \
   -e VIRTUAL_HOST=db.nubcoder.com \
+  -e VIRTUAL_PORT=8000 \
   -e LETSENCRYPT_HOST=db.nubcoder.com \
   -e LETSENCRYPT_EMAIL=admin@nubcoder.com \
-  --expose 80 \
+  --expose 8000 \
   nubdb-docs:latest
-```
-
-### Option 3: Documentation with Compose
-
-```bash
-docker-compose -f docker-compose.docs.yml up -d
 ```
 
 ## Configuration
@@ -63,21 +66,11 @@ docker-compose -f docker-compose.docs.yml up -d
 
 Required for automatic SSL:
 - `VIRTUAL_HOST=db.nubcoder.com` - Your domain
+- `VIRTUAL_PORT=8000` - Internal port (important!)
 - `LETSENCRYPT_HOST=db.nubcoder.com` - SSL certificate domain
 - `LETSENCRYPT_EMAIL=admin@nubcoder.com` - Admin email
 
-### Custom Port (Manual)
-
-```bash
-# Expose on specific port (e.g., 8080)
-docker run -d \
-  --name nubdb-docs \
-  --network web \
-  -p 8080:80 \
-  -e VIRTUAL_HOST=db.nubcoder.com \
-  -e LETSENCRYPT_HOST=db.nubcoder.com \
-  nubdb-docs:latest
-```
+**Note**: `VIRTUAL_PORT=8000` tells nginx-proxy which internal port to use.
 
 ## Nginx Proxy Manager Setup
 
@@ -121,17 +114,15 @@ services:
 ### Start Documentation
 
 ```bash
-docker-compose -f docker-compose.docs.yml up -d
+docker-compose up -d nubdb-docs
 ```
 
 The documentation will automatically:
-1. Register with nginx-proxy
+1. Register with nginx-proxy on port 8000
 2. Get SSL certificate from Let's Encrypt
 3. Be accessible at https://db.nubcoder.com
 
 ## Traefik Setup
-
-### Traefik Configuration
 
 If using Traefik instead:
 
@@ -143,7 +134,7 @@ services:
       dockerfile: Dockerfile.docs
     container_name: nubdb-docs
     expose:
-      - "80"
+      - "8000"
     networks:
       - web
     labels:
@@ -151,7 +142,7 @@ services:
       - "traefik.http.routers.nubdb-docs.rule=Host(`db.nubcoder.com`)"
       - "traefik.http.routers.nubdb-docs.entrypoints=websecure"
       - "traefik.http.routers.nubdb-docs.tls.certresolver=letsencrypt"
-      - "traefik.http.services.nubdb-docs.loadbalancer.server.port=80"
+      - "traefik.http.services.nubdb-docs.loadbalancer.server.port=8000"
 ```
 
 ## DNS Configuration
@@ -175,36 +166,28 @@ docker ps | grep nubdb-docs
 # Check logs
 docker logs nubdb-docs
 
-# Test health check
-docker exec nubdb-docs wget -qO- http://localhost/health
+# Test health check (from web network)
+docker run --rm --network web alpine sh -c \
+  "apk add wget && wget -qO- http://nubdb-docs:8000/health"
 ```
 
 ### Test Access
 
 ```bash
-# Local (if port is exposed)
-curl http://localhost:8080
-
 # Via domain (after DNS + SSL setup)
 curl https://db.nubcoder.com
+
+# From web network
+docker exec nginx-proxy wget -qO- http://nubdb-docs:8000/health
 ```
 
 ## Image Details
 
 - **Base Image**: nginx:alpine
 - **Size**: ~15MB
-- **Exposed Port**: 80
-- **Security**: Non-root user (uid 1000)
-- **Health Check**: `/health` endpoint
-
-## Nginx Features
-
-- ✅ Gzip compression
-- ✅ Security headers
-- ✅ Static asset caching
-- ✅ SPA-friendly routing
-- ✅ Health check endpoint
-- ✅ Hidden file protection
+- **Exposed Port**: 8000 (internal)
+- **Security**: Non-root user
+- **Health Check**: `/health` endpoint on port 8000
 
 ## Building
 
@@ -218,46 +201,8 @@ docker build -f Dockerfile.docs -t nubdb-docs:latest .
 docker images nubdb-docs
 
 # Test locally
-docker run -d -p 8080:80 nubdb-docs:latest
-```
-
-## Production Deployment
-
-### Full Stack with Reverse Proxy
-
-```bash
-# 1. Ensure nginx-proxy is running
-docker ps | grep nginx-proxy
-
-# 2. Create web network
-docker network create web
-
-# 3. Start NubDB stack
-docker-compose -f docker-compose.full.yml up -d
-
-# 4. Check status
-docker-compose -f docker-compose.full.yml ps
-
-# 5. View logs
-docker-compose -f docker-compose.full.yml logs -f nubdb-docs
-```
-
-### SSL Certificate Generation
-
-Automatic via ACME companion:
-1. Container starts with VIRTUAL_HOST and LETSENCRYPT_HOST
-2. ACME companion detects environment variables
-3. Requests certificate from Let's Encrypt
-4. Certificate auto-renews every 60 days
-
-### Monitor Certificates
-
-```bash
-# Check certificate
-docker exec nginx-proxy-acme ls -l /etc/nginx/certs/db.nubcoder.com.crt
-
-# View ACME logs
-docker logs nginx-proxy-acme
+docker run -d -p 8888:8000 nubdb-docs:latest
+curl http://localhost:8888/health
 ```
 
 ## Troubleshooting
@@ -271,8 +216,31 @@ docker ps | grep nubdb-docs
 # Check network
 docker inspect nubdb-docs | grep NetworkMode
 
-# Test internally
-docker exec nubdb-docs wget -qO- http://localhost/
+# Test internally on port 8000
+docker exec nubdb-docs wget -qO- http://localhost:8000/
+```
+
+### nginx-proxy Not Routing Traffic
+
+```bash
+# Check VIRTUAL_PORT is set
+docker inspect nubdb-docs | grep VIRTUAL_PORT
+
+# Should show: VIRTUAL_PORT=8000
+
+# If missing, add to docker-compose.yml:
+environment:
+  - VIRTUAL_PORT=8000
+```
+
+### Wrong Port in nginx-proxy
+
+```bash
+# Check nginx-proxy configuration
+docker exec nginx-proxy cat /etc/nginx/conf.d/default.conf | grep db.nubcoder.com
+
+# Should show proxy_pass to port 8000
+# If showing port 80, VIRTUAL_PORT is not set correctly
 ```
 
 ### SSL Certificate Issues
@@ -288,154 +256,73 @@ docker logs nginx-proxy-acme
 docker inspect nubdb-docs | grep -A 5 Env
 ```
 
-### 502 Bad Gateway
+## Port Conflict Resolution
+
+If you encounter port conflicts:
+
+1. **Change internal port** (in this example, using 8000):
+   - Update `docs-nginx.conf`: `listen 8000;`
+   - Update `Dockerfile.docs`: `EXPOSE 8000`
+   - Update `docker-compose.yml`: `expose: ["8000"]` and `VIRTUAL_PORT=8000`
+
+2. **Alternative ports** you can use:
+   - 8000 (current)
+   - 8001, 8002, etc.
+   - 9000, 9001, etc.
+   - Any unused port
+
+## Testing with Direct Port
+
+For temporary testing with direct port access:
 
 ```bash
-# Check container health
-docker inspect nubdb-docs | grep Health -A 10
+# Test with port mapping
+docker run -d --name docs-test -p 8888:8000 nubdb-docs:latest
 
-# Restart container
-docker restart nubdb-docs
+# Access
+curl http://localhost:8888
+curl http://localhost:8888/health
 
-# Check nginx-proxy can reach container
-docker exec nginx-proxy wget -qO- http://nubdb-docs/health
+# Clean up
+docker stop docs-test && docker rm docs-test
 ```
 
-## Updating Documentation
+Or use Makefile:
+```bash
+make docs-test
+```
 
-### Rebuild and Deploy
+## Production Deployment
+
+### Full Stack with Reverse Proxy
 
 ```bash
-# Pull latest code
-git pull origin main
+# 1. Ensure nginx-proxy is running
+docker ps | grep nginx-proxy
 
-# Rebuild image
-docker build -f Dockerfile.docs -t nubdb-docs:latest .
+# 2. Create web network
+docker network create web
 
-# Stop old container
-docker stop nubdb-docs
-docker rm nubdb-docs
+# 3. Start NubDB stack
+docker-compose up -d
 
-# Start new container
-docker-compose -f docker-compose.docs.yml up -d
+# 4. Check status
+docker-compose ps
 
-# Or with full stack
-docker-compose -f docker-compose.full.yml up -d --build nubdb-docs
+# 5. Verify VIRTUAL_PORT
+docker inspect nubdb-docs | grep VIRTUAL_PORT
+
+# 6. View logs
+docker-compose logs -f nubdb-docs
 ```
 
-### Zero-Downtime Update
+## Important Notes
 
-```bash
-# Build new image
-docker build -f Dockerfile.docs -t nubdb-docs:v2 .
-
-# Start new container with different name
-docker run -d \
-  --name nubdb-docs-v2 \
-  --network web \
-  -e VIRTUAL_HOST=db.nubcoder.com \
-  -e LETSENCRYPT_HOST=db.nubcoder.com \
-  nubdb-docs:v2
-
-# Wait for health check
-sleep 10
-
-# Stop old container
-docker stop nubdb-docs
-docker rm nubdb-docs
-
-# Rename new container
-docker rename nubdb-docs-v2 nubdb-docs
-```
-
-## Security Best Practices
-
-1. **Non-root User** - Container runs as uid 1000
-2. **Security Headers** - XSS, clickjacking protection
-3. **Hidden Files** - Denied by nginx
-4. **HTTPS Only** - Via Let's Encrypt
-5. **Health Checks** - Automatic restart on failure
-
-## Monitoring
-
-### Health Check
-
-```bash
-# Manual check
-curl https://db.nubcoder.com/health
-
-# Docker health status
-docker inspect nubdb-docs --format='{{.State.Health.Status}}'
-```
-
-### Logs
-
-```bash
-# Follow logs
-docker logs -f nubdb-docs
-
-# Last 100 lines
-docker logs --tail 100 nubdb-docs
-
-# Logs with timestamps
-docker logs -t nubdb-docs
-```
-
-### Metrics
-
-```bash
-# Container stats
-docker stats nubdb-docs
-
-# Disk usage
-docker system df
-```
-
-## Backup and Restore
-
-### Backup Documentation
-
-```bash
-# Export container
-docker export nubdb-docs > nubdb-docs-backup.tar
-
-# Save image
-docker save nubdb-docs:latest > nubdb-docs-image.tar
-```
-
-### Restore
-
-```bash
-# Load image
-docker load < nubdb-docs-image.tar
-
-# Run container
-docker-compose -f docker-compose.docs.yml up -d
-```
-
-## Integration with Main Application
-
-The documentation container works alongside the NubDB database:
-
-```
-┌─────────────────────────────────────────────┐
-│         Docker Network: web                  │
-│                                              │
-│  ┌──────────────┐      ┌──────────────┐   │
-│  │  nubdb-docs  │      │ nubdb-server │   │
-│  │  (port 80)   │      │  (port 6379) │   │
-│  └──────────────┘      └──────────────┘   │
-│         │                       │           │
-│         ▼                       ▼           │
-│  ┌─────────────────────────────────────┐  │
-│  │      nginx-proxy (80, 443)          │  │
-│  └─────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
-         │
-         ▼
-    Internet
-    (https://db.nubcoder.com)
-```
+1. **Port 8000 is internal** - not accessible from host
+2. **VIRTUAL_PORT must be set** - tells nginx-proxy which port to use
+3. **No port mapping in compose** - only expose, no ports directive
+4. **Access via reverse proxy only** - https://db.nubcoder.com
+5. **Health check uses port 8000** - `/health` endpoint
 
 ## Support
 
