@@ -2,6 +2,8 @@
 
 A blazing-fast, AOF-based in-memory database written in Zig, optimized for maximum throughput and minimal latency.
 
+📚 **[View Full Documentation →](https://nub-coders.github.io/nubdt/)**
+
 ## Features
 
 - **In-Memory Storage**: O(1) hash table lookups using Robin Hood hashing
