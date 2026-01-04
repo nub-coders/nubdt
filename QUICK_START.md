@@ -10,7 +10,7 @@ docker-compose up -d
 
 **That's it!** You now have:
 - ✅ NubDB Database running on port `6379`
-- ✅ Documentation website on port `8080`
+- ✅ Documentation website (accessible via reverse proxy)
 - ✅ Auto SSL setup for `db.nubcoder.com`
 
 ## 📋 Access Points
@@ -27,15 +27,19 @@ docker run --network web alpine sh -c \
 
 ### Documentation
 
-**Direct Access (HTTP):**
-```
-http://localhost:8080
-```
-
 **Via Reverse Proxy (HTTPS):**
 ```
 https://db.nubcoder.com
 ```
+
+**From Container on Web Network:**
+```bash
+# From another container
+docker run --network web alpine sh -c \
+  "wget -qO- http://nubdb-docs/health"
+```
+
+**Note:** Documentation is only accessible via reverse proxy (nginx-proxy) or from containers on the web network. No direct host port mapping.
 
 ## 🔧 Common Commands
 
@@ -97,29 +101,22 @@ make docker-run          # Run database
 make docker-stop         # Stop database
 
 # Testing
-make docs-test           # Test docs on port 8888
+make docs-test           # Test docs on port 8888 (temporary)
 ```
 
 ## 🌐 Port Configuration
 
-Default ports:
-- **Database**: `6379` (standard Redis port)
-- **Documentation**: `8080` (HTTP)
+Exposed ports:
+- **Database**: `6379` (mapped to host)
+- **Documentation**: `80` (exposed only, no host mapping)
 
-Change ports in `docker-compose.yml`:
+Documentation is accessible **only** via:
+1. Reverse proxy (nginx-proxy) at `https://db.nubcoder.com`
+2. Other containers on `web` network at `http://nubdb-docs`
 
-```yaml
-ports:
-  - "6379:6379"    # Database (change left number)
-  - "8080:80"      # Documentation (change left number)
-```
-
-Examples:
-```yaml
-# Use different ports
-ports:
-  - "6380:6379"    # Database on 6380
-  - "9000:80"      # Documentation on 9000
+To test documentation directly (temporary):
+```bash
+make docs-test  # Creates test container on port 8888
 ```
 
 ## 🔐 SSL Configuration
@@ -166,7 +163,10 @@ docker inspect nubdb-docs | grep -A 5 Health
 
 # Test endpoints
 echo "SIZE" | nc localhost 6379                    # Database
-curl http://localhost:8080/health                  # Documentation
+
+# Documentation health (from web network)
+docker run --rm --network web alpine sh -c \
+  "apk add wget && wget -qO- http://nubdb-docs/health"
 ```
 
 ## 💾 Data Persistence
@@ -222,38 +222,45 @@ echo "PING" | nc localhost 6379
 docker exec nubdb-server sh -c "echo SIZE | nc localhost 6379"
 ```
 
-### Documentation not accessible
+### Documentation not accessible via domain
 
 ```bash
-# Check if running
+# Check if container is running
 docker ps | grep nubdb-docs
 
-# Test direct access
-curl http://localhost:8080
+# Check nginx-proxy is running
+docker ps | grep nginx-proxy
 
-# Test health endpoint
-curl http://localhost:8080/health
+# Check environment variables
+docker inspect nubdb-docs | grep VIRTUAL_HOST
 
-# Check logs
-docker logs nubdb-docs
+# Test from web network
+docker run --rm --network web alpine sh -c \
+  "apk add wget && wget -qO- http://nubdb-docs/health"
+
+# Check nginx-proxy logs
+docker logs nginx-proxy
+
+# Check DNS
+nslookup db.nubcoder.com
 ```
 
-### Port already in use
+### Need direct access for testing
 
 ```bash
-# Find what's using the port
-sudo lsof -i :6379
-sudo lsof -i :8080
-
-# Change port in docker-compose.yml
-# Example: "6380:6379" instead of "6379:6379"
+# Temporary test container with port mapping
+make docs-test
+# or
+docker run -d --name docs-test -p 8888:80 nubdb-docs:latest
+curl http://localhost:8888
+docker stop docs-test && docker rm docs-test
 ```
 
 ## 📚 Next Steps
 
 - [Full Docker Guide](DOCKER.md)
 - [Web Network Guide](DOCKER_WEB_NETWORK.md)
-- [API Reference](https://db.nubcoder.com) or `http://localhost:8080`
+- [Documentation Deployment](DOCKER_DOCS_DEPLOYMENT.md)
 - [Kubernetes Deployment](k8s/README.md)
 
 ## 💡 Tips
@@ -263,26 +270,23 @@ sudo lsof -i :8080
    docker network create web
    ```
 
-2. **Use docker-compose for production**
+2. **Setup nginx-proxy for documentation access**
+   - Documentation requires reverse proxy
+   - No direct host port mapping
+
+3. **Use docker-compose for production**
    - Easier management
    - Automatic restarts
    - Health checks
 
-3. **Monitor logs regularly**
+4. **Monitor logs regularly**
    ```bash
    docker-compose logs -f --tail=100
    ```
 
-4. **Backup your data**
+5. **Backup your data**
    - Database: Volume `nubdb-data`
    - AOF file: `/data/nubdb.aof`
-
-5. **Update regularly**
-   ```bash
-   git pull origin main
-   docker-compose build
-   docker-compose up -d
-   ```
 
 ## 🆘 Quick Reference
 
@@ -315,10 +319,31 @@ docker system prune -a
 You'll know everything is working when:
 
 ✅ `docker-compose ps` shows all services "Up (healthy)"  
-✅ `echo "PING" | nc localhost 6379` returns "PONG"  
-✅ `curl http://localhost:8080` returns HTML  
-✅ `curl http://localhost:8080/health` returns "healthy"  
-✅ https://db.nubcoder.com loads (if DNS configured)
+✅ `echo "PING" | nc localhost 6379` works  
+✅ `docker run --rm --network web alpine wget -qO- http://nubdb-docs/health` returns "healthy"  
+✅ `https://db.nubcoder.com` loads (after DNS + nginx-proxy setup)
+
+## 🌐 Network Architecture
+
+```
+┌─────────────────────────────────────────┐
+│     Docker Network: web                  │
+│                                          │
+│  ┌──────────────┐  ┌──────────────┐   │
+│  │  nubdb-docs  │  │ nubdb-server │   │
+│  │  :80 (expose)│  │  :6379       │   │
+│  └──────┬───────┘  └──────────────┘   │
+│         │                               │
+│         ▼                               │
+│  ┌──────────────┐                      │
+│  │ nginx-proxy  │                      │
+│  │ :80, :443    │                      │
+│  └──────────────┘                      │
+└─────────────────────────────────────────┘
+           │
+           ▼
+  https://db.nubcoder.com
+```
 
 ---
 
