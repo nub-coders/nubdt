@@ -123,6 +123,36 @@ k8s-logs:
 k8s-port-forward:
 	kubectl port-forward -n nubdb svc/nubdb-service 6379:6379
 
+# Documentation targets
+docs-build:
+	docker build -f Dockerfile.docs -t nubdb-docs:latest .
+
+docs-run: docs-build
+	docker-compose -f docker-compose.docs.yml up -d
+	@echo "Documentation running at http://localhost (via proxy)"
+
+docs-stop:
+	docker-compose -f docker-compose.docs.yml down
+
+docs-logs:
+	docker logs -f nubdb-docs
+
+docs-test: docs-build
+	docker run -d --name nubdb-docs-test -p 8888:80 nubdb-docs:latest
+	@echo "Testing on http://localhost:8888"
+	@sleep 2
+	@curl -s http://localhost:8888/health && echo " - Health check OK"
+	@docker stop nubdb-docs-test && docker rm nubdb-docs-test
+
+# Full stack
+full-stack:
+	docker network create web 2>/dev/null || true
+	docker-compose -f docker-compose.full.yml up -d
+	@echo "Full stack running: Database + Documentation"
+
+full-stack-down:
+	docker-compose -f docker-compose.full.yml down
+
 # Utility targets
 benchmark: build
 	./zig-linux-x86_64-0.13.0/zig build bench -Doptimize=ReleaseFast
