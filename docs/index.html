@@ -22,6 +22,7 @@
                 <li><a href="#api">API</a></li>
                 <li><a href="#examples">Examples</a></li>
                 <li><a href="https://github.com/nub-coders/nubdt" target="_blank">GitHub</a></li>
+                <li><a href="#" id="loginBtn" class="btn-login">Login</a></li>
             </ul>
         </div>
     </nav>
@@ -531,6 +532,119 @@ fn main() {
             </p>
         </div>
     </footer>
+
+    <!-- Login/Signup Modal -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <h2>Login to NubDB</h2>
+                <p class="form-subtitle">Get your personal database connection URI</p>
+                <form onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" required placeholder="you@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Login</button>
+                </form>
+                <p class="form-footer">
+                    Don't have an account? <a href="#" onclick="showSignup()">Sign up</a>
+                </p>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signupForm" class="auth-form" style="display: none;">
+                <h2>Create Account</h2>
+                <p class="form-subtitle">Get started with your own NubDB instance</p>
+                <form onsubmit="handleSignup(event)">
+                    <div class="form-group">
+                        <label for="signupName">Full Name</label>
+                        <input type="text" id="signupName" required placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupEmail">Email</label>
+                        <input type="email" id="signupEmail" required placeholder="you@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupPassword">Password</label>
+                        <input type="password" id="signupPassword" required placeholder="••••••••" minlength="8">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupConfirmPassword">Confirm Password</label>
+                        <input type="password" id="signupConfirmPassword" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+                </form>
+                <p class="form-footer">
+                    Already have an account? <a href="#" onclick="showLogin()">Login</a>
+                </p>
+            </div>
+
+            <!-- Dashboard (shown after login) -->
+            <div id="dashboard" class="dashboard" style="display: none;">
+                <h2>Welcome, <span id="userName"></span>! 🎉</h2>
+                <p class="form-subtitle">Your personal NubDB connection details</p>
+                
+                <div class="dashboard-card">
+                    <h3>🔗 Connection URI</h3>
+                    <div class="uri-display">
+                        <code id="userUri">nubdb://user_xxxxx:token_xxxxx@db.nubcoder.com:6379/db_xxxxx</code>
+                        <button class="btn-copy" onclick="copyUri()">📋 Copy</button>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="info-card">
+                        <h4>📊 Database ID</h4>
+                        <p id="dbId" class="info-value">db_xxxxx</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>👤 User ID</h4>
+                        <p id="userId" class="info-value">user_xxxxx</p>
+                    </div>
+                    <div class="info-card">
+                        <h4>🔑 API Token</h4>
+                        <p id="apiToken" class="info-value">••••••••</p>
+                        <button class="btn-small" onclick="toggleToken()">👁️ Show</button>
+                    </div>
+                    <div class="info-card">
+                        <h4>📦 Plan</h4>
+                        <p class="info-value">Free Tier</p>
+                        <small>100MB storage, 10K ops/day</small>
+                    </div>
+                </div>
+
+                <div class="dashboard-card">
+                    <h3>📝 Quick Start with Your Database</h3>
+                    <div class="code-tabs">
+                        <button class="tab-btn active" onclick="showCode('python')">Python</button>
+                        <button class="tab-btn" onclick="showCode('node')">Node.js</button>
+                        <button class="tab-btn" onclick="showCode('curl')">cURL</button>
+                    </div>
+                    <pre id="codeExample" class="code-example"><code class="language-python">from nubdb_client import NubDBClient
+
+# Your personal connection
+client = NubDBClient(uri="<span id="uriInCode1"></span>")
+
+# Start using your database
+client.set('greeting', 'Hello World!')
+print(client.get('greeting'))  # "Hello World!"</code></pre>
+                </div>
+
+                <div class="dashboard-actions">
+                    <button class="btn btn-secondary" onclick="showDocs()">📚 View Docs</button>
+                    <button class="btn btn-secondary" onclick="downloadConfig()">⬇️ Download Config</button>
+                    <button class="btn btn-danger" onclick="handleLogout()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="script.js"></script>
