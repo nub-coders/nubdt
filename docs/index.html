@@ -554,7 +554,65 @@ fn main() {
                     <button type="submit" class="btn btn-primary btn-block">Login</button>
                 </form>
                 <p class="form-footer">
-                    Don't have an account? <a href="#" onclick="showSignup()">Sign up</a>
+                    Don't have an account? <a href="#" onclick="showSignup()">Sign up</a> •
+                    <a href="#" onclick="showForgotPassword()">Forgot password?</a>
+                </p>
+            </div>
+
+            <!-- OTP Verification Form -->
+            <div id="otpForm" class="auth-form" style="display: none;">
+                <h2>Verify Your Email</h2>
+                <p class="form-subtitle">Enter the 6-digit code sent to <span id="otpEmail"></span></p>
+                <form onsubmit="handleVerifyOTP(event)">
+                    <div class="form-group">
+                        <label for="otpCode">Verification Code</label>
+                        <input type="text" id="otpCode" required placeholder="123456" maxlength="6" pattern="[0-9]{6}">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Verify Email</button>
+                </form>
+                <p class="form-footer">
+                    Didn't receive code? <a href="#" onclick="resendVerification()">Resend</a> •
+                    <a href="#" onclick="showLogin()">Back to login</a>
+                </p>
+            </div>
+
+            <!-- Forgot Password Form -->
+            <div id="forgotPasswordForm" class="auth-form" style="display: none;">
+                <h2>Reset Password</h2>
+                <p class="form-subtitle">Enter your email to receive a reset code</p>
+                <form onsubmit="handleForgotPassword(event)">
+                    <div class="form-group">
+                        <label for="forgotEmail">Email</label>
+                        <input type="email" id="forgotEmail" required placeholder="you@example.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Send Reset Code</button>
+                </form>
+                <p class="form-footer">
+                    Remember your password? <a href="#" onclick="showLogin()">Back to login</a>
+                </p>
+            </div>
+
+            <!-- Reset Password Form -->
+            <div id="resetPasswordForm" class="auth-form" style="display: none;">
+                <h2>Reset Password</h2>
+                <p class="form-subtitle">Enter the code sent to <span id="resetEmail"></span></p>
+                <form onsubmit="handleResetPassword(event)">
+                    <div class="form-group">
+                        <label for="resetCode">Reset Code</label>
+                        <input type="text" id="resetCode" required placeholder="123456" maxlength="6" pattern="[0-9]{6}">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" required placeholder="••••••••" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmNewPassword">Confirm New Password</label>
+                        <input type="password" id="confirmNewPassword" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Reset Password</button>
+                </form>
+                <p class="form-footer">
+                    <a href="#" onclick="showLogin()">Back to login</a>
                 </p>
             </div>
 
@@ -564,8 +622,12 @@ fn main() {
                 <p class="form-subtitle">Get started with your own NubDB instance</p>
                 <form onsubmit="handleSignup(event)">
                     <div class="form-group">
-                        <label for="signupName">Full Name</label>
-                        <input type="text" id="signupName" required placeholder="John Doe">
+                        <label for="signupFirstName">First Name</label>
+                        <input type="text" id="signupFirstName" required placeholder="John">
+                    </div>
+                    <div class="form-group">
+                        <label for="signupLastName">Last Name</label>
+                        <input type="text" id="signupLastName" required placeholder="Doe">
                     </div>
                     <div class="form-group">
                         <label for="signupEmail">Email</label>
@@ -573,7 +635,8 @@ fn main() {
                     </div>
                     <div class="form-group">
                         <label for="signupPassword">Password</label>
-                        <input type="password" id="signupPassword" required placeholder="••••••••" minlength="8">
+                        <input type="password" id="signupPassword" required placeholder="••••••••" minlength="6">
+                        <small style="color: #6b7280;">Minimum 6 characters</small>
                     </div>
                     <div class="form-group">
                         <label for="signupConfirmPassword">Confirm Password</label>
@@ -615,7 +678,7 @@ fn main() {
                     </div>
                     <div class="info-card">
                         <h4>📦 Plan</h4>
-                        <p class="info-value">Free Tier</p>
+                        <p class="info-value">Free Tier <span id="userCredits" class="credits-badge">20 credits</span></p>
                         <small>100MB storage, 10K ops/day</small>
                     </div>
                 </div>
