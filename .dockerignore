@@ -1,0 +1,44 @@
+# Build artifacts
+zig-out/
+.zig-cache/
+*.o
+*.so
+*.a
+
+# AOF files
+*.aof
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test.sh
+demo.sh
+
+# Local Zig installation
+zig-linux-x86_64-0.13.0/
+
+# Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+python/
+clients/
+
+# Other
+.DS_Store
+*.log

@@ -5,14 +5,35 @@ const AOFConfig = @import("aof.zig").AOFConfig;
 const FsyncPolicy = @import("aof.zig").FsyncPolicy;
 const Compaction = @import("compaction.zig").Compaction;
 const protocol = @import("protocol.zig");
+const server = @import("server.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
     
+    // Check for command-line arguments
+    var args = try std.process.argsWithAllocator(allocator);
+    defer args.deinit();
+    
+    _ = args.skip(); // Skip program name
+    
+    var server_mode = false;
+    var port: u16 = 6379;
+    
+    while (args.next()) |arg| {
+        if (std.mem.eql(u8, arg, "--server")) {
+            server_mode = true;
+            if (args.next()) |port_str| {
+                port = std.fmt.parseInt(u16, port_str, 10) catch 6379;
+            }
+        } else if (std.mem.eql(u8, arg, "--help") or std.mem.eql(u8, arg, "-h")) {
+            try printHelp();
+            return;
+        }
+    }
+    
     const stdout = std.io.getStdOut().writer();
-    const stdin = std.io.getStdIn().reader();
     
     try stdout.print("NubDB - High-Performance AOF Database\n", .{});
     try stdout.print("Initializing...\n", .{});
@@ -46,13 +67,32 @@ pub fn main() !void {
     const compaction = try Compaction.init(allocator, storage, aof);
     defer compaction.deinit();
     
+    // Start background compaction thread
+    const compaction_thread = try std.Thread.spawn(.{}, compactionWorker, .{ compaction, storage });
+    compaction_thread.detach();
+    
+    if (server_mode) {
+        try stdout.print("Starting server mode on port {d}...\n\n", .{port});
+        const server_config = server.ServerConfig{
+            .port = port,
+            .host = "0.0.0.0",
+            .max_connections = 1000,
+        };
+        try server.startServer(storage, server_config);
+    } else {
+        try runCliMode(allocator, storage, aof);
+    }
+}
+
+fn runCliMode(allocator: std.mem.Allocator, storage: *Storage, aof: *AOF) !void {
+    _ = allocator;
+    const stdout = std.io.getStdOut().writer();
+    const stdin = std.io.getStdIn().reader();
+    
     try stdout.print("Database ready. Type 'quit' to exit.\n\n", .{});
     
     var buf: [4096]u8 = undefined;
     var ops_since_check: usize = 0;
-    
-    const compaction_thread = try std.Thread.spawn(.{}, compactionWorker, .{ compaction, storage });
-    defer compaction_thread.join();
     
     while (true) {
         try stdout.print("> ", .{});
@@ -155,6 +195,58 @@ pub fn main() !void {
             ops_since_check = 0;
         }
     }
+}
+
+fn printHelp() !void {
+    const stdout = std.io.getStdOut().writer();
+    try stdout.print(
+        \\NubDB - High-Performance AOF Database
+        \\
+        \\USAGE:
+        \\    nubdt [OPTIONS]
+        \\
+        \\OPTIONS:
+        \\    --server [PORT]    Run in TCP server mode (default port: 6379)
+        \\    --help, -h         Show this help message
+        \\
+        \\MODES:
+        \\    Interactive (default):
+        \\        ./nubdt
+        \\        Starts an interactive REPL for database commands
+        \\
+        \\    Server mode:
+        \\        ./nubdt --server
+        \\        ./nubdt --server 6379
+        \\        Starts a TCP server that accepts client connections
+        \\
+        \\COMMANDS (in both modes):
+        \\    SET key value [ttl]    Store a key-value pair
+        \\    GET key                Retrieve a value
+        \\    DELETE key             Remove a key
+        \\    EXISTS key             Check if key exists
+        \\    INCR key               Increment counter
+        \\    DECR key               Decrement counter
+        \\    SIZE                   Get number of keys
+        \\    CLEAR                  Delete all keys
+        \\    QUIT                   Exit (CLI) or close connection (server)
+        \\
+        \\EXAMPLES:
+        \\    # Start interactive mode
+        \\    ./nubdt
+        \\
+        \\    # Start TCP server on default port
+        \\    ./nubdt --server
+        \\
+        \\    # Start TCP server on custom port
+        \\    ./nubdt --server 8080
+        \\
+        \\    # Connect with client (after starting server)
+        \\    telnet localhost 6379
+        \\    python3 clients/python/nubdb.py
+        \\
+        \\For more information, see README.md
+        \\
+    , .{});
 }
 
 fn replayCallback(op_type: @import("aof.zig").OpType, key: []const u8, value: []const u8) !void {

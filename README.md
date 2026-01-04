@@ -12,6 +12,8 @@ A blazing-fast, AOF-based in-memory database written in Zig, optimized for maxim
 - **Atomic Operations**: INCR/DECR with integer values
 - **High Performance**: 100k+ ops/second on modern hardware
 - **UTF-8 Support**: Full Unicode support for international text
+- **TCP Server Mode**: Multi-threaded TCP server with persistent connections
+- **Docker Support**: Production-ready Docker and Kubernetes deployment
 
 ## Architecture
 
@@ -48,25 +50,62 @@ Format: `[timestamp:i64][op_type:u8][key_len:u32][key][value_len:u32][value]`
 - Background thread rewrites AOF with current state only
 - Eliminates redundant operations (multiple SETs, DELETEs)
 
-## Building
+## Quick Start
+
+### Using Docker (Recommended)
 
 ```bash
-# Build in release mode for maximum performance
+# Create web network
+docker network create web
+
+# Start with docker-compose
+docker-compose up -d
+
+# Or build and run manually
+docker build -t nubdb:latest .
+docker run -d --network web -p 6379:6379 -v nubdb-data:/data nubdb:latest
+
+# Connect to the database
+echo "SET mykey myvalue" | nc localhost 6379
+```
+
+See [DOCKER.md](DOCKER.md) for detailed Docker instructions.  
+See [DOCKER_WEB_NETWORK.md](DOCKER_WEB_NETWORK.md) for web network integration.
+
+### Building from Source
+
+```bash
+# Using Makefile
+make build           # Build the binary
+make server          # Run in server mode
+make docker-build    # Build Docker image
+
+# Or directly with zig
 zig build -Doptimize=ReleaseFast
-
-# Run the database
 zig build run -Doptimize=ReleaseFast
-
-# Run benchmarks
 zig build bench -Doptimize=ReleaseFast
 ```
 
 ## Usage
 
+### TCP Server Mode
+
+```bash
+# Start server on default port (6379)
+./nubdt --server
+
+# Start server on custom port
+./nubdt --server 8080
+
+# Connect with telnet or netcat
+telnet localhost 6379
+echo "SET key value" | nc localhost 6379
+```
+
 ### Interactive Mode
 
 ```bash
-$ zig build run -Doptimize=ReleaseFast
+$ ./nubdt
 NubDB - High-Performance AOF Database
 Initializing...
 Replaying AOF log...
@@ -193,9 +232,41 @@ NubDB trades some features for raw speed:
 | SET Latency | <5µs | ~50µs |
 | GET Latency | <1µs | ~20µs |
 
+## Docker & Kubernetes
+
+### Docker Compose with Web Network
+
+```bash
+docker network create web     # Create network once
+docker-compose up -d          # Start NubDB
+docker-compose logs -f        # View logs
+docker-compose down           # Stop
+```
+
+### Connect Other Services
+
+```bash
+# Run app on same network
+docker run -d --network web \
+  -e NUBDB_HOST=nubdb-server \
+  -e NUBDB_PORT=6379 \
+  your-app:latest
+```
+
+### Kubernetes
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl get pods -n nubdb
+```
+
+See [DOCKER.md](DOCKER.md) and [k8s/README.md](k8s/README.md) for details.
+
 ## Roadmap
 
-- [ ] Network protocol (TCP/Redis-compatible)
+- [x] Network protocol (TCP server mode)
+- [x] Docker and Kubernetes support
 - [ ] SIMD-accelerated string operations
 - [ ] Memory-mapped AOF for zero-copy reads
 - [ ] Lock-free hash table
@@ -203,6 +274,7 @@ NubDB trades some features for raw speed:
 - [ ] Snapshot/checkpoint support
 - [ ] More data types (lists, sets, sorted sets)
 - [ ] Lua scripting
+- [ ] Redis protocol compatibility
 
 ## License
 

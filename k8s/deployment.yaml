@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nubdb
+  namespace: nubdb
+  labels:
+    app: nubdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nubdb
+  template:
+    metadata:
+      labels:
+        app: nubdb
+    spec:
+      containers:
+      - name: nubdb
+        image: nubdb:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+          name: nubdb
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "2"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: nubdb-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nubdb-service
+  namespace: nubdb
+  labels:
+    app: nubdb
+spec:
+  type: ClusterIP
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+    name: nubdb
+  selector:
+    app: nubdb
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nubdb-pvc
+  namespace: nubdb
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
