@@ -5,7 +5,29 @@ NubDB is now accessible externally through the host domain `db.nubcoder.com` on 
 
 ## Access Methods
 
-### 1. Direct Host Access
+### 1. Using Python Client (check.py)
+The included `check.py` script automatically detects the best connection method:
+
+```bash
+# Default: Uses db.nubcoder.com (production)
+python3 check.py
+
+# Local development: Uses localhost
+NUBDB_HOST=localhost python3 check.py
+
+# Docker network: Uses container name
+NUBDB_HOST=nubdb-server python3 check.py
+
+# Custom host
+NUBDB_HOST=custom.domain.com python3 check.py
+```
+
+**Connection Priority:**
+1. Explicit `host` parameter in code
+2. `NUBDB_HOST` environment variable
+3. Auto-detect: `db.nubcoder.com` (fallback to `localhost` if DNS fails)
+
+### 2. Direct TCP Access
 Connect directly to the server:
 ```bash
 # Using netcat
@@ -13,23 +35,26 @@ echo "SIZE" | nc db.nubcoder.com 6379
 
 # Using telnet
 telnet db.nubcoder.com 6379
-
-# Using Python client
-python3 check.py  # Update host to db.nubcoder.com
 ```
 
-### 2. Local Development
+### 3. Local Development
 Connect to localhost when running on the same machine:
 ```bash
 # Port 6379 is mapped to host
 nc localhost 6379
+NUBDB_HOST=localhost python3 check.py
 ```
 
-### 3. Docker Network Access
+### 4. Docker Network Access
 From containers on the `web` network:
 ```bash
 # Use container name
 nc nubdb-server 6379
+docker run --rm --network web python:3-alpine sh -c "
+  apk add py3-pip && 
+  pip3 install requests &&
+  NUBDB_HOST=nubdb-server python3 /path/to/check.py
+"
 ```
 
 ## Service Configuration
@@ -73,7 +98,21 @@ docs.nubcoder.com -> YOUR_SERVER_IP
 
 ## Testing Connectivity
 
-### Test Database
+### Quick Test with check.py
+```bash
+# Test with default domain (db.nubcoder.com)
+python3 check.py
+
+# Test with localhost
+NUBDB_HOST=localhost python3 check.py
+
+# Test from Docker container
+docker run --rm --network web \
+  -v $(pwd)/check.py:/check.py \
+  python:3-alpine python /check.py
+```
+
+### Manual Test Database
 ```bash
 # Local test
 echo "SIZE" | nc localhost 6379
@@ -81,7 +120,7 @@ echo "SIZE" | nc localhost 6379
 # Remote test (after DNS is configured)
 echo "SIZE" | nc db.nubcoder.com 6379
 
-# Python test
+# Python one-liner
 python3 -c "
 import socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -103,12 +142,38 @@ curl https://docs.nubcoder.com
 
 ## Client Connection Examples
 
-### Python
+### Python (using check.py)
+```python
+from check import NubDBClient
+
+# Automatic detection (uses db.nubcoder.com by default)
+client = NubDBClient()
+
+# Or specify host explicitly
+client = NubDBClient(host='localhost')
+
+# Or use environment variable
+import os
+os.environ['NUBDB_HOST'] = 'custom.domain.com'
+client = NubDBClient()
+
+# Usage
+client.set('greeting', 'Hello from NubDB!')
+result = client.get('greeting')
+print(result)
+client.close()
+```
+
+### Python (manual implementation)
 ```python
 import socket
+import os
 
 class NubDBClient:
-    def __init__(self, host='db.nubcoder.com', port=6379):
+    def __init__(self, host=None, port=6379):
+        if host is None:
+            host = os.getenv('NUBDB_HOST', 'db.nubcoder.com')
+        
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((host, port))
     
@@ -121,12 +186,16 @@ class NubDBClient:
         cmd = f'GET {key}\n'
         self.sock.sendall(cmd.encode())
         return self.sock.recv(1024).decode().strip()
+    
+    def close(self):
+        self.sock.close()
 
 # Usage
 client = NubDBClient()
 client.set('greeting', 'Hello from NubDB!')
 result = client.get('greeting')
 print(result)
+client.close()
 ```
 
 ### Node.js
