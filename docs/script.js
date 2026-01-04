@@ -588,7 +588,7 @@ function generateUserData(email, firstName, lastName, userId = null) {
     const dbId = 'db_' + Math.random().toString(36).substr(2, 9);
     const token = 'token_' + Math.random().toString(36).substr(2, 16);
     
-    const uri = `nubdb://${userIdStr}:${token}@db.nubcoder.com:6379/${dbId}`;
+    const uri = `nubdb://${userIdStr}:${token}@nubdt.nubcoder.com:6379/${dbId}`;
     
     return {
         firstName: firstName || email.split('@')[0],
@@ -640,7 +640,7 @@ function toggleToken() {
 // Show code example by language
 function showCode(lang) {
     const user = JSON.parse(localStorage.getItem('nubdb_user') || 'null');
-    const uri = user ? user.uri : 'nubdb://user_xxxxx:token_xxxxx@db.nubcoder.com:6379/db_xxxxx';
+    const uri = user ? user.uri : 'nubdb://user_xxxxx:token_xxxxx@nubdt.nubcoder.com:6379/db_xxxxx';
     
     const examples = {
         python: `from nubdb_client import NubDBClient
@@ -689,7 +689,7 @@ function downloadConfig() {
     
     const config = {
         database: {
-            host: "db.nubcoder.com",
+            host: "nubdt.nubcoder.com",
             port: 6379,
             user_id: user.userId,
             database_id: user.dbId,
@@ -762,7 +762,7 @@ function handleCreateDatabase(event) {
     
     // Create new database
     const dbId = 'db_' + Math.random().toString(36).substr(2, 9);
-    const uri = `nubdb://${username}:${password}@db.nubcoder.com:6379/${dbId}`;
+    const uri = `nubdb://${username}:${password}@nubdt.nubcoder.com:6379/${dbId}`;
     
     const newDatabase = {
         id: dbId,
@@ -912,7 +912,7 @@ function downloadDbConfig() {
         database: {
             id: db.id,
             name: db.name,
-            host: "db.nubcoder.com",
+            host: "nubdt.nubcoder.com",
             port: 6379,
             username: db.username,
             password: db.password,
@@ -954,7 +954,7 @@ function downloadAllConfigs() {
         databases: databases.map(db => ({
             id: db.id,
             name: db.name,
-            host: "db.nubcoder.com",
+            host: "nubdt.nubcoder.com",
             port: 6379,
             username: db.username,
             password: db.password,
