@@ -35,8 +35,6 @@ services:
     container_name: nubdb-docs
     expose:
       - "80"
-    ports:
-      - "8080:80"
     restart: unless-stopped
     networks:
       - web

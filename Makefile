@@ -93,7 +93,7 @@ compose-up:
 	docker-compose up -d
 	@echo "NubDB started on 'web' network"
 	@echo "  - Database: localhost:6379"
-	@echo "  - Documentation: http://localhost:8080"
+	@echo "  - Documentation: https://db.nubcoder.com (via reverse proxy)"
 	@sleep 2
 	@docker-compose logs
 
@@ -132,8 +132,8 @@ docs-build:
 docs-run:
 	docker-compose up -d nubdb-docs
 	@echo "Documentation running:"
-	@echo "  - Direct: http://localhost:8080"
-	@echo "  - Proxy: https://db.nubcoder.com (if configured)"
+	@echo "  - Proxy: https://db.nubcoder.com (via reverse proxy)"
+	@echo "  - Internal: http://nubdb-docs (on web network)"
 
 docs-stop:
 	docker-compose stop nubdb-docs
@@ -157,8 +157,7 @@ full-stack:
 	docker-compose up -d
 	@echo "Full stack running:"
 	@echo "  - Database: localhost:6379"
-	@echo "  - Documentation: http://localhost:8080"
-	@echo "  - Documentation (SSL): https://db.nubcoder.com"
+	@echo "  - Documentation: https://db.nubcoder.com (via reverse proxy)"
 
 full-stack-down:
 	docker-compose down

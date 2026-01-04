@@ -247,8 +247,7 @@ docker-compose down           # Stop
 
 **Access:**
 - Database: `localhost:6379`
-- Documentation: `http://localhost:8080`
-- Documentation (SSL): `https://db.nubcoder.com`
+- Documentation: `https://db.nubcoder.com` (via reverse proxy)
 
 ### Connect Other Services
 
