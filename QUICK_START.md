@@ -11,7 +11,7 @@ docker-compose up -d
 **That's it!** You now have:
 - ✅ NubDB Database running on port `6379`
 - ✅ Documentation website (accessible via reverse proxy)
-- ✅ Auto SSL setup for `db.nubcoder.com`
+- ✅ Auto SSL setup for `nubdt.nubcoder.com`
 
 ## 📋 Access Points
 
@@ -29,7 +29,7 @@ docker run --network web alpine sh -c \
 
 **Via Reverse Proxy (HTTPS):**
 ```
-https://db.nubcoder.com
+https://nubdt.nubcoder.com
 ```
 
 **From Container on Web Network:**
@@ -111,7 +111,7 @@ Exposed ports:
 - **Documentation**: `80` (exposed only, no host mapping)
 
 Documentation is accessible **only** via:
-1. Reverse proxy (nginx-proxy) at `https://db.nubcoder.com`
+1. Reverse proxy (nginx-proxy) at `https://nubdt.nubcoder.com`
 2. Other containers on `web` network at `http://nubdb-docs`
 
 To test documentation directly (temporary):
@@ -125,14 +125,14 @@ The documentation container is pre-configured for automatic SSL via nginx-proxy:
 
 ```yaml
 environment:
-  - VIRTUAL_HOST=db.nubcoder.com
-  - LETSENCRYPT_HOST=db.nubcoder.com
+  - VIRTUAL_HOST=nubdt.nubcoder.com
+  - LETSENCRYPT_HOST=nubdt.nubcoder.com
   - LETSENCRYPT_EMAIL=admin@nubcoder.com
 ```
 
 **Prerequisites:**
 1. nginx-proxy running on `web` network
-2. DNS pointing `db.nubcoder.com` to your server
+2. DNS pointing `nubdt.nubcoder.com` to your server
 3. Port 80 and 443 open on firewall
 
 **Setup nginx-proxy:**
@@ -242,7 +242,7 @@ docker run --rm --network web alpine sh -c \
 docker logs nginx-proxy
 
 # Check DNS
-nslookup db.nubcoder.com
+nslookup nubdt.nubcoder.com
 ```
 
 ### Need direct access for testing
@@ -321,7 +321,7 @@ You'll know everything is working when:
 ✅ `docker-compose ps` shows all services "Up (healthy)"  
 ✅ `echo "PING" | nc localhost 6379` works  
 ✅ `docker run --rm --network web alpine wget -qO- http://nubdb-docs/health` returns "healthy"  
-✅ `https://db.nubcoder.com` loads (after DNS + nginx-proxy setup)
+✅ `https://nubdt.nubcoder.com` loads (after DNS + nginx-proxy setup)
 
 ## 🌐 Network Architecture
 
@@ -342,7 +342,7 @@ You'll know everything is working when:
 └─────────────────────────────────────────┘
            │
            ▼
-  https://db.nubcoder.com
+  https://nubdt.nubcoder.com
 ```
 
 ---

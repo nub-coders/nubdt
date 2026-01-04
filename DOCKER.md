@@ -25,7 +25,7 @@ docker-compose down -v
 
 **Services:**
 - **NubDB Database**: `localhost:6379`
-- **Documentation**: `https://db.nubcoder.com` (via reverse proxy only)
+- **Documentation**: `https://nubdt.nubcoder.com` (via reverse proxy only)
 
 ### Using Docker CLI
 

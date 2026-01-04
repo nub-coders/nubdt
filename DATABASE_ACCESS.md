@@ -1,7 +1,7 @@
 # NubDB External Access Configuration
 
 ## Overview
-NubDB is now accessible externally through the host domain `db.nubcoder.com` on port 6379.
+NubDB is now accessible externally through the host domain `nubdt.nubcoder.com` on port 6379.
 
 ## Access Methods
 
@@ -9,7 +9,7 @@ NubDB is now accessible externally through the host domain `db.nubcoder.com` on 
 The included `check.py` script automatically detects the best connection method:
 
 ```bash
-# Default: Uses db.nubcoder.com (production)
+# Default: Uses nubdt.nubcoder.com (production)
 python3 check.py
 
 # Local development: Uses localhost
@@ -25,16 +25,16 @@ NUBDB_HOST=custom.domain.com python3 check.py
 **Connection Priority:**
 1. Explicit `host` parameter in code
 2. `NUBDB_HOST` environment variable
-3. Auto-detect: `db.nubcoder.com` (fallback to `localhost` if DNS fails)
+3. Auto-detect: `nubdt.nubcoder.com` (fallback to `localhost` if DNS fails)
 
 ### 2. Direct TCP Access
 Connect directly to the server:
 ```bash
 # Using netcat
-echo "SIZE" | nc db.nubcoder.com 6379
+echo "SIZE" | nc nubdt.nubcoder.com 6379
 
 # Using telnet
-telnet db.nubcoder.com 6379
+telnet nubdt.nubcoder.com 6379
 ```
 
 ### 3. Local Development
@@ -59,30 +59,30 @@ docker run --rm --network web python:3-alpine sh -c "
 
 ## Service Configuration
 
-### Database Service (db.nubcoder.com)
+### Database Service (nubdt.nubcoder.com)
 - **Port**: 6379 (TCP)
 - **Protocol**: Redis-compatible protocol
 - **Access**: Direct TCP connection
 - **Health Check**: `echo SIZE | nc localhost 6379`
 
-### Documentation Service (docs.nubcoder.com)
+### Documentation Service (nubdt.nubcoder.com)
 - **Port**: 8000 (HTTP)
 - **Protocol**: HTTP/HTTPS
 - **Access**: Web browser or HTTP client
-- **URL**: https://docs.nubcoder.com
+- **URL**: https://nubdt.nubcoder.com
 
 ## Environment Variables
 
 ```yaml
 # Database
-VIRTUAL_HOST=db.nubcoder.com
+VIRTUAL_HOST=nubdt.nubcoder.com
 VIRTUAL_PORT=6379
 VIRTUAL_PROTO=tcp
 
 # Documentation
-VIRTUAL_HOST=docs.nubcoder.com
+VIRTUAL_HOST=nubdt.nubcoder.com
 VIRTUAL_PORT=8000
-LETSENCRYPT_HOST=docs.nubcoder.com
+LETSENCRYPT_HOST=nubdt.nubcoder.com
 LETSENCRYPT_EMAIL=admin@nubcoder.com
 ```
 
@@ -92,15 +92,15 @@ For external access to work, you need to configure DNS:
 
 ```
 # A Records
-db.nubcoder.com   -> YOUR_SERVER_IP
-docs.nubcoder.com -> YOUR_SERVER_IP
+nubdt.nubcoder.com   -> YOUR_SERVER_IP
+nubdt.nubcoder.com -> YOUR_SERVER_IP
 ```
 
 ## Testing Connectivity
 
 ### Quick Test with check.py
 ```bash
-# Test with default domain (db.nubcoder.com)
+# Test with default domain (nubdt.nubcoder.com)
 python3 check.py
 
 # Test with localhost
@@ -118,13 +118,13 @@ docker run --rm --network web \
 echo "SIZE" | nc localhost 6379
 
 # Remote test (after DNS is configured)
-echo "SIZE" | nc db.nubcoder.com 6379
+echo "SIZE" | nc nubdt.nubcoder.com 6379
 
 # Python one-liner
 python3 -c "
 import socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect(('db.nubcoder.com', 6379))
+sock.connect(('nubdt.nubcoder.com', 6379))
 sock.sendall(b'SIZE\n')
 print(sock.recv(1024).decode())
 sock.close()
@@ -137,7 +137,7 @@ sock.close()
 curl http://localhost:8888  # When using make docs-test
 
 # Remote test (after DNS is configured)
-curl https://docs.nubcoder.com
+curl https://nubdt.nubcoder.com
 ```
 
 ## Client Connection Examples
@@ -146,7 +146,7 @@ curl https://docs.nubcoder.com
 ```python
 from check import NubDBClient
 
-# Automatic detection (uses db.nubcoder.com by default)
+# Automatic detection (uses nubdt.nubcoder.com by default)
 client = NubDBClient()
 
 # Or specify host explicitly
@@ -172,7 +172,7 @@ import os
 class NubDBClient:
     def __init__(self, host=None, port=6379):
         if host is None:
-            host = os.getenv('NUBDB_HOST', 'db.nubcoder.com')
+            host = os.getenv('NUBDB_HOST', 'nubdt.nubcoder.com')
         
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((host, port))
@@ -203,7 +203,7 @@ client.close()
 const net = require('net');
 
 class NubDBClient {
-    constructor(host = 'db.nubcoder.com', port = 6379) {
+    constructor(host = 'nubdt.nubcoder.com', port = 6379) {
         this.client = new net.Socket();
         this.client.connect(port, host);
     }
@@ -257,22 +257,22 @@ sudo iptables -A INPUT -p tcp --dport 6379 -j DROP
 
 ## Troubleshooting
 
-### Cannot connect to db.nubcoder.com
-1. Check DNS: `nslookup db.nubcoder.com`
-2. Check port: `telnet db.nubcoder.com 6379`
+### Cannot connect to nubdt.nubcoder.com
+1. Check DNS: `nslookup nubdt.nubcoder.com`
+2. Check port: `telnet nubdt.nubcoder.com 6379`
 3. Check firewall: `sudo ufw status`
 4. Check container: `docker-compose ps`
 
 ### Documentation not loading
-1. Check DNS: `nslookup docs.nubcoder.com`
+1. Check DNS: `nslookup nubdt.nubcoder.com`
 2. Check nginx-proxy: `docker ps | grep nginx-proxy`
 3. Check container: `docker logs nubdb-docs`
 4. Verify VIRTUAL_HOST: `docker inspect nubdb-docs | grep VIRTUAL_HOST`
 
 ## Next Steps
 
-1. **Configure DNS** - Point db.nubcoder.com and docs.nubcoder.com to your server
+1. **Configure DNS** - Point nubdt.nubcoder.com and nubdt.nubcoder.com to your server
 2. **Setup nginx-proxy** - If not already running, deploy nginx-proxy for HTTPS
-3. **Enable SSL** - Let's Encrypt will auto-generate certs for docs.nubcoder.com
+3. **Enable SSL** - Let's Encrypt will auto-generate certs for nubdt.nubcoder.com
 4. **Add authentication** - Implement auth layer for production use
 5. **Monitor performance** - Use Docker stats and logs to monitor usage
