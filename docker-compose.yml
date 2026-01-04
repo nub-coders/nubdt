@@ -19,7 +19,7 @@ services:
       - web
     environment:
       - TZ=UTC
-      - VIRTUAL_HOST=nubdt.nubcoder.com
+      - VIRTUAL_HOST=db.nubcoder.com
       - VIRTUAL_PORT=6379
       - VIRTUAL_PROTO=tcp
     healthcheck:

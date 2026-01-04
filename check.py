@@ -9,13 +9,13 @@ class NubDBClient:
         Priority:
         1. Explicit host parameter
         2. NUBDB_HOST environment variable
-        3. Auto-detect: 'nubdt.nubcoder.com' for production, 'localhost' for local
+        3. Auto-detect: 'db.nubcoder.com' for production, 'localhost' for local
         """
         if host is None:
             host = os.getenv('NUBDB_HOST')
             if host is None:
                 # Default to domain for production, localhost for development
-                host = 'nubdt.nubcoder.com'
+                host = 'db.nubcoder.com'
         
         self.host = host
         self.port = port
@@ -56,7 +56,7 @@ class NubDBClient:
 
 # Usage examples
 if __name__ == "__main__":
-    # Will use nubdt.nubcoder.com by default, or localhost if domain not resolved
+    # Will use db.nubcoder.com by default, or localhost if domain not resolved
     client = NubDBClient()
     
     # Set a value

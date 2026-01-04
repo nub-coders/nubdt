@@ -243,7 +243,7 @@ function generateUserData(email, firstName, lastName, userId) {
     const dbId = 'db_' + Math.random().toString(36).substr(2, 9);
     const token = 'token_' + Math.random().toString(36).substr(2, 16);
     
-    const uri = `nubdb://${userIdStr}:${token}@nubdt.nubcoder.com:6379/${dbId}`;
+    const uri = `nubdb://${userIdStr}:${token}@db.nubcoder.com:6379/${dbId}`;
     
     return {
         firstName,
