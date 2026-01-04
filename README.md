@@ -246,7 +246,7 @@ docker-compose down           # Stop
 ```
 
 **Access:**
-- Database: `localhost:6379` or `nubdt.nubcoder.com:6379`
+- Database: `localhost:6379` or `db.nubcoder.com:6379`
 - Documentation: `https://nubdt.nubcoder.com` (via reverse proxy)
 
 ### Connect Other Services
