@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  nubdb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nubdb:latest
+    container_name: nubdb-server
+    ports:
+      - "6379:6379"
+    volumes:
+      - nubdb-data:/data
+    restart: unless-stopped
+    networks:
+      - web
+    environment:
+      - TZ=UTC
+    healthcheck:
+      test: ["CMD", "sh", "-c", "echo SIZE | nc localhost 6379 || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  nubdb-data:
+    driver: local
+
+networks:
+  web:
+    external: true
