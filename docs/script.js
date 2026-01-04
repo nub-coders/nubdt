@@ -255,19 +255,72 @@ function showDashboard(user) {
     
     // Populate dashboard with user data
     document.getElementById('userName').textContent = user.firstName + ' ' + user.lastName;
-    document.getElementById('userUri').textContent = user.uri;
-    document.getElementById('dbId').textContent = user.dbId;
     document.getElementById('userId').textContent = user.userId;
-    document.getElementById('apiToken').textContent = '••••••••';
-    document.getElementById('apiToken').dataset.token = user.token;
     
     // Update credits
     if (user.credits) {
         document.getElementById('userCredits').textContent = `${user.credits} credits`;
     }
     
-    // Update code examples
-    updateCodeExamples(user.uri);
+    // Load user databases
+    loadUserDatabases(user);
+}
+
+// Load and display user's databases
+function loadUserDatabases(user) {
+    // Get databases from localStorage
+    let databases = JSON.parse(localStorage.getItem('nubdb_databases') || '[]');
+    
+    // Update database count
+    document.getElementById('dbCount').textContent = databases.length;
+    
+    // Enable/disable create button based on limit
+    const createBtn = document.getElementById('createDbBtn');
+    if (databases.length >= 3) {
+        createBtn.disabled = true;
+        createBtn.textContent = '🚫 Limit Reached (3/3)';
+    } else {
+        createBtn.disabled = false;
+        createBtn.textContent = '➕ Create Database';
+    }
+    
+    // Display databases
+    const listContainer = document.getElementById('databaseList');
+    
+    if (databases.length === 0) {
+        listContainer.innerHTML = `
+            <div class="empty-state">
+                <p>🔍 No databases yet. Create your first database to get started!</p>
+            </div>
+        `;
+    } else {
+        listContainer.innerHTML = databases.map(db => `
+            <div class="database-card" onclick="showDatabaseDetails('${db.id}')">
+                <div class="database-card-header">
+                    <h4 class="database-card-title">🗄️ ${db.name || 'Database'}</h4>
+                    <span class="database-card-id">${db.id}</span>
+                </div>
+                <div class="database-card-body">
+                    <div class="database-card-field">
+                        <strong>👤 Username</strong>
+                        <span>${db.username}</span>
+                    </div>
+                    <div class="database-card-field">
+                        <strong>🔑 Password</strong>
+                        <span>••••••••</span>
+                    </div>
+                    <div class="database-card-field">
+                        <strong>📅 Created</strong>
+                        <span>${new Date(db.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div class="database-card-field">
+                        <strong>🔗 Status</strong>
+                        <span style="color: #10b981;">● Active</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
 }
 
 // Handle login
@@ -663,6 +716,289 @@ function downloadConfig() {
 function showDocs() {
     modal.style.display = 'none';
     document.querySelector('#api').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ==================== DATABASE MANAGEMENT ====================
+
+// Show create database form
+function showCreateDatabase() {
+    document.getElementById('createDatabaseForm').style.display = 'block';
+    document.getElementById('createDbBtn').style.display = 'none';
+}
+
+// Cancel database creation
+function cancelCreateDatabase() {
+    document.getElementById('createDatabaseForm').style.display = 'none';
+    document.getElementById('createDbBtn').style.display = 'inline-block';
+    
+    // Reset form
+    document.getElementById('dbUsername').value = '';
+    document.getElementById('dbPassword').value = '';
+    document.getElementById('dbName').value = '';
+}
+
+// Handle database creation
+function handleCreateDatabase(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('dbUsername').value;
+    const password = document.getElementById('dbPassword').value;
+    const name = document.getElementById('dbName').value || `Database ${Date.now()}`;
+    
+    // Get existing databases
+    let databases = JSON.parse(localStorage.getItem('nubdb_databases') || '[]');
+    
+    // Check limit
+    if (databases.length >= 3) {
+        alert('You have reached the maximum limit of 3 databases.');
+        return;
+    }
+    
+    // Check if username already exists
+    if (databases.some(db => db.username === username)) {
+        alert('Username already exists. Please choose a different username.');
+        return;
+    }
+    
+    // Create new database
+    const dbId = 'db_' + Math.random().toString(36).substr(2, 9);
+    const uri = `nubdb://${username}:${password}@db.nubcoder.com:6379/${dbId}`;
+    
+    const newDatabase = {
+        id: dbId,
+        name: name,
+        username: username,
+        password: password,
+        uri: uri,
+        createdAt: new Date().toISOString(),
+        status: 'active'
+    };
+    
+    // Add to databases
+    databases.push(newDatabase);
+    localStorage.setItem('nubdb_databases', JSON.stringify(databases));
+    
+    // Hide form and reload list
+    cancelCreateDatabase();
+    const user = JSON.parse(localStorage.getItem('nubdb_user'));
+    loadUserDatabases(user);
+    
+    // Show success message
+    alert(`Database "${name}" created successfully!`);
+}
+
+// Show database details in modal
+function showDatabaseDetails(dbId) {
+    const databases = JSON.parse(localStorage.getItem('nubdb_databases') || '[]');
+    const db = databases.find(d => d.id === dbId);
+    
+    if (!db) {
+        alert('Database not found!');
+        return;
+    }
+    
+    // Populate modal
+    document.getElementById('modalDbName').textContent = db.name;
+    document.getElementById('modalDbUri').textContent = db.uri;
+    document.getElementById('modalDbId').textContent = db.id;
+    document.getElementById('modalDbUsername').textContent = db.username;
+    document.getElementById('modalDbPassword').textContent = '••••••••';
+    document.getElementById('modalDbPassword').dataset.password = db.password;
+    document.getElementById('modalDbCreated').textContent = new Date(db.createdAt).toLocaleDateString();
+    document.getElementById('modalUriInCode').textContent = db.uri;
+    
+    // Store current db id for actions
+    document.getElementById('dbDetailsModal').dataset.currentDbId = dbId;
+    
+    // Show modal
+    document.getElementById('dbDetailsModal').style.display = 'block';
+    
+    // Update code example with Python by default
+    showModalCode('python');
+}
+
+// Close database details modal
+function closeDbDetails() {
+    document.getElementById('dbDetailsModal').style.display = 'none';
+}
+
+// Copy URI from modal
+function copyModalUri() {
+    const uri = document.getElementById('modalDbUri').textContent;
+    navigator.clipboard.writeText(uri).then(() => {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    });
+}
+
+// Toggle password visibility in modal
+let modalPasswordVisible = false;
+function toggleModalPassword() {
+    const passwordEl = document.getElementById('modalDbPassword');
+    const btn = event.target;
+    
+    if (modalPasswordVisible) {
+        passwordEl.textContent = '••••••••';
+        btn.textContent = '👁️ Show';
+        modalPasswordVisible = false;
+    } else {
+        passwordEl.textContent = passwordEl.dataset.password;
+        btn.textContent = '🙈 Hide';
+        modalPasswordVisible = true;
+    }
+}
+
+// Show code example in modal
+function showModalCode(lang) {
+    const dbId = document.getElementById('dbDetailsModal').dataset.currentDbId;
+    const databases = JSON.parse(localStorage.getItem('nubdb_databases') || '[]');
+    const db = databases.find(d => d.id === dbId);
+    
+    if (!db) return;
+    
+    const examples = {
+        python: `from nubdb_client import NubDBClient
+
+# Connect to ${db.name}
+client = NubDBClient(uri="${db.uri}")
+
+# Start using your database
+client.set('greeting', 'Hello World!')
+print(client.get('greeting'))  # "Hello World!"`,
+        
+        node: `const NubDBClient = require('nubdb-client');
+
+// Connect to ${db.name}
+const client = new NubDBClient("${db.uri}");
+
+// Start using your database
+await client.set('greeting', 'Hello World!');
+console.log(await client.get('greeting'));  // "Hello World!"`,
+        
+        curl: `# Set a value in ${db.name}
+curl -X POST "https://api.nubcoder.com/v1/${db.id}/set" \\
+  -u "${db.username}:${db.password}" \\
+  -d '{"key": "greeting", "value": "Hello World!"}'
+
+# Get a value
+curl "https://api.nubcoder.com/v1/${db.id}/get?key=greeting" \\
+  -u "${db.username}:${db.password}"`
+    };
+    
+    document.getElementById('modalCodeExample').innerHTML = 
+        `<code class="language-${lang === 'curl' ? 'bash' : lang}">${examples[lang]}</code>`;
+    
+    // Update active tab
+    document.querySelectorAll('#dbDetailsModal .tab-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Re-highlight
+    hljs.highlightAll();
+}
+
+// Download single database config
+function downloadDbConfig() {
+    const dbId = document.getElementById('dbDetailsModal').dataset.currentDbId;
+    const databases = JSON.parse(localStorage.getItem('nubdb_databases') || '[]');
+    const db = databases.find(d => d.id === dbId);
+    
+    if (!db) return;
+    
+    const config = {
+        database: {
+            id: db.id,
+            name: db.name,
+            host: "db.nubcoder.com",
+            port: 6379,
+            username: db.username,
+            password: db.password,
+            uri: db.uri
+        },
+        connection: {
+            timeout: 5000,
+            retry_attempts: 3,
+            pool_size: 10
+        }
+    };
+    
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nubdb-${db.name.replace(/\s+/g, '-').toLowerCase()}-config.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Download all database configs
+function downloadAllConfigs() {
+    const databases = JSON.parse(localStorage.getItem('nubdb_databases') || '[]');
+    const user = JSON.parse(localStorage.getItem('nubdb_user'));
+    
+    if (databases.length === 0) {
+        alert('No databases to export!');
+        return;
+    }
+    
+    const config = {
+        user: {
+            id: user.userId,
+            name: `${user.firstName} ${user.lastName}`,
+            email: user.email,
+            credits: user.credits
+        },
+        databases: databases.map(db => ({
+            id: db.id,
+            name: db.name,
+            host: "db.nubcoder.com",
+            port: 6379,
+            username: db.username,
+            password: db.password,
+            uri: db.uri,
+            createdAt: db.createdAt
+        })),
+        connection: {
+            timeout: 5000,
+            retry_attempts: 3,
+            pool_size: 10
+        }
+    };
+    
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nubdb-all-databases-config.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Confirm database deletion
+function confirmDeleteDb() {
+    const dbId = document.getElementById('dbDetailsModal').dataset.currentDbId;
+    const databases = JSON.parse(localStorage.getItem('nubdb_databases') || '[]');
+    const db = databases.find(d => d.id === dbId);
+    
+    if (!db) return;
+    
+    if (confirm(`Are you sure you want to delete "${db.name}"?\n\nThis action cannot be undone. All data in this database will be lost.`)) {
+        // Remove from databases
+        const updatedDatabases = databases.filter(d => d.id !== dbId);
+        localStorage.setItem('nubdb_databases', JSON.stringify(updatedDatabases));
+        
+        // Close modal
+        closeDbDetails();
+        
+        // Reload dashboard
+        const user = JSON.parse(localStorage.getItem('nubdb_user'));
+        loadUserDatabases(user);
+        
+        alert(`Database "${db.name}" has been deleted.`);
+    }
 }
 
 // Update login button text
