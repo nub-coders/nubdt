@@ -10,18 +10,22 @@ This guide explains how to build and run NubDB using Docker.
 # Create the external network first
 docker network create web
 
-# Build and start the container
+# Build and start both database and documentation
 docker-compose up -d
 
 # View logs
 docker-compose logs -f
 
-# Stop the container
+# Stop everything
 docker-compose down
 
 # Stop and remove data
 docker-compose down -v
 ```
+
+**Services:**
+- **NubDB Database**: `localhost:6379`
+- **Documentation**: `http://localhost:8080` or `https://db.nubcoder.com` (via reverse proxy)
 
 ### Using Docker CLI
 
