@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nubdt"
-version = "1.0.0"
+version = "1.0.1"
 description = "Python client for NubDT — a blazing-fast, AOF-based in-memory database written in Zig"
 readme = "README.md"
 license = "MIT"

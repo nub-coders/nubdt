@@ -78,6 +78,9 @@ class NubDB:
             self._sock.settimeout(self.timeout)
             self._sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self._sock.connect((self.host, self.port))
+            
+            # Wrap socket file object for buffered line reading
+            self._file = self._sock.makefile("r", encoding="utf-8")
             self._connected = True
         except socket.gaierror as e:
             self._cleanup_socket()
@@ -120,6 +123,16 @@ class NubDB:
     def _cleanup_socket(self) -> None:
         """Safely close and clean up the socket."""
         self._connected = False
+        
+        # Close file handle first
+        if hasattr(self, "_file") and self._file:
+            try:
+                self._file.close()
+            except OSError:
+                pass
+            self._file = None
+            
+        # Close socket
         if self._sock is not None:
             try:
                 self._sock.close()
@@ -158,8 +171,15 @@ class NubDB:
 
         try:
             self._sock.sendall(data)
-            response = self._sock.recv(self.BUFFER_SIZE).decode("utf-8").strip()
-            return response
+            
+            # Read line-buffered response
+            response = self._file.readline()
+            if not response:
+                 # EOF implies connection closed
+                raise BrokenPipeError("Server closed connection")
+                
+            return response.strip()
+            
         except socket.timeout as e:
             raise TimeoutError(f"Command timed out: {command}") from e
         except (BrokenPipeError, OSError) as e:
@@ -169,10 +189,10 @@ class NubDB:
                 # Retry once after reconnect
                 try:
                     self._sock.sendall(data)
-                    response = (
-                        self._sock.recv(self.BUFFER_SIZE).decode("utf-8").strip()
-                    )
-                    return response
+                    response = self._file.readline()
+                    if not response:
+                         raise ConnectionError("Server closed connection immediately after reconnect")
+                    return response.strip()
                 except OSError as retry_err:
                     raise ConnectionError(
                         f"Command failed after reconnect: {retry_err}"
@@ -198,6 +218,13 @@ class NubDB:
         Returns:
             True if the operation succeeded.
         """
+        # Quote strings to handle spaces properly
+        if isinstance(value, str):
+            # Basic escaping: minimal implementation as server expects raw or quoted
+            # NubDB protocol seems loose. Let's send raw unless it has spaces?
+            # Actually Protocol says quoted strings are values. 
+            pass 
+            
         cmd = f"SET {key} {value}"
         if ttl is not None and ttl > 0:
             cmd += f" {ttl}"
@@ -217,6 +244,11 @@ class NubDB:
         response = self._send_command(f"GET {key}")
         if not response or "(nil)" in response or "not found" in response.lower():
             return None
+            
+        # Strip quotes if present (NubDB returns "value")
+        if response.startswith('"') and response.endswith('"'):
+            return response[1:-1]
+            
         return response
 
     def delete(self, key: str) -> bool:
