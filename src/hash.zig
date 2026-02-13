@@ -51,6 +51,24 @@ pub fn HashTable(comptime V: type) type {
             }
             
             const hash = wyhash(key);
+            var idx = hash % self.capacity;
+            var psl: u32 = 0;
+
+            // First pass: check if the key already exists to avoid unnecessary duplication
+            while (true) {
+                if (self.entries[idx]) |*existing| {
+                    if (existing.hash == hash and std.mem.eql(u8, existing.key, key)) {
+                        existing.value = value;
+                        return;
+                    }
+                    if (psl > existing.psl) break;
+                    psl += 1;
+                    idx = (idx + 1) % self.capacity;
+                } else break;
+            }
+
+            // Key not found or we've reached a point where it should have been.
+            // Duplicate the key and perform Robin Hood insertion.
             const key_owned = try self.allocator.dupe(u8, key);
             errdefer self.allocator.free(key_owned);
             
@@ -58,19 +76,11 @@ pub fn HashTable(comptime V: type) type {
                 .key = key_owned,
                 .value = value,
                 .hash = hash,
-                .psl = 0,
+                .psl = psl,
             };
-            
-            var idx = hash % self.capacity;
             
             while (true) {
                 if (self.entries[idx]) |*existing| {
-                    if (existing.hash == hash and std.mem.eql(u8, existing.key, key)) {
-                        self.allocator.free(existing.key);
-                        existing.* = entry;
-                        return;
-                    }
-                    
                     if (entry.psl > existing.psl) {
                         const temp = existing.*;
                         existing.* = entry;
