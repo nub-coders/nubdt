@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nubdb"
+name = "nubdt"
 version = "1.0.0"
-description = "Python client for NubDB — a blazing-fast, AOF-based in-memory database written in Zig"
+description = "Python client for NubDT — a blazing-fast, AOF-based in-memory database written in Zig"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
