@@ -40,6 +40,8 @@ class NubDB
   ##
   # SET key-value pair
   def set(key, value, ttl: 0)
+    validate_key!(key)
+    validate_value!(value)
     cmd = %(SET #{key} "#{value}")
     cmd += " #{ttl}" if ttl > 0
     response = send_command(cmd)
@@ -49,6 +51,7 @@ class NubDB
   ##
   # GET value by key
   def get(key)
+    validate_key!(key)
     response = send_command("GET #{key}")
     return nil if response == '(nil)'
 
@@ -59,6 +62,7 @@ class NubDB
   ##
   # DELETE key
   def delete(key)
+    validate_key!(key)
     response = send_command("DELETE #{key}")
     response == 'OK'
   end
@@ -66,6 +70,7 @@ class NubDB
   ##
   # EXISTS check if key exists
   def exists?(key)
+    validate_key!(key)
     response = send_command("EXISTS #{key}")
     response == '1'
   end
@@ -73,6 +78,7 @@ class NubDB
   ##
   # INCR increment counter
   def incr(key)
+    validate_key!(key)
     response = send_command("INCR #{key}")
     response.to_i
   end
@@ -80,6 +86,7 @@ class NubDB
   ##
   # DECR decrement counter
   def decr(key)
+    validate_key!(key)
     response = send_command("DECR #{key}")
     response.to_i
   end
@@ -107,6 +114,33 @@ class NubDB
     @socket.close
     @socket = nil
   end
+
+  private
+
+  ##
+  # Validate key to prevent command and argument injection
+  def validate_key!(key)
+    s = key.to_s
+    if s.match?(/[\n\r\s]/)
+      raise ArgumentError, 'Key cannot contain newlines or spaces'
+    end
+    s
+  end
+
+  ##
+  # Validate value to prevent command and argument injection
+  def validate_value!(value)
+    s = value.to_s
+    if s.include?("\n") || s.include?("\r")
+      raise ArgumentError, 'Value cannot contain newlines'
+    end
+    if s.include?('"')
+      raise ArgumentError, 'Value cannot contain double quotes'
+    end
+    s
+  end
+
+  public
 
   ##
   # Enable automatic cleanup
