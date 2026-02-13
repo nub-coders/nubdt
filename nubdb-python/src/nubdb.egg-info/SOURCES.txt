@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/nubdb/__init__.py
+src/nubdb/client.py
+src/nubdb/exceptions.py
+src/nubdb/py.typed
+src/nubdb.egg-info/PKG-INFO
+src/nubdb.egg-info/SOURCES.txt
+src/nubdb.egg-info/dependency_links.txt
+src/nubdb.egg-info/top_level.txt

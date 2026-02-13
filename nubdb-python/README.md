@@ -1,0 +1,167 @@
+# NubDB Python Client
+
+> 🚀 Python client for **[NubDB](https://github.com/nub-coders/nubdt)** — a blazing-fast, AOF-based in-memory database written in Zig.
+
+[![PyPI version](https://img.shields.io/pypi/v/nubdb)](https://pypi.org/project/nubdb/)
+[![Python](https://img.shields.io/pypi/pyversions/nubdb)](https://pypi.org/project/nubdb/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Installation
+
+```bash
+pip install nubdb
+```
+
+## Quick Start
+
+Make sure your NubDB server is running (default: `localhost:6379`), then:
+
+```python
+from nubdb import NubDB
+
+# Connect to NubDB
+db = NubDB()
+
+# Set and get values
+db.set("name", "Alice")
+print(db.get("name"))  # → Alice
+
+# Use TTL (auto-expire in 60 seconds)
+db.set("session", "abc123", ttl=60)
+
+# Counters
+db.set("views", 0)
+db.incr("views")  # → 1
+db.incr("views")  # → 2
+db.decr("views")  # → 1
+
+# Check existence
+db.exists("name")  # → True
+db.exists("nope")  # → False
+
+# Database size
+db.size()  # → 3
+
+# Delete keys
+db.delete("name")
+
+# Close when done
+db.close()
+```
+
+## Context Manager
+
+```python
+from nubdb import NubDB
+
+with NubDB() as db:
+    db.set("key", "value")
+    print(db.get("key"))
+# Connection automatically closed
+```
+
+## Configuration
+
+```python
+from nubdb import NubDB
+
+# Custom host and port
+db = NubDB(host="db.nubcoder.com", port=6379)
+
+# With timeout and retry settings
+db = NubDB(
+    host="localhost",
+    port=6379,
+    timeout=10.0,          # Socket timeout (seconds)
+    auto_reconnect=True,   # Auto-reconnect on connection loss
+    max_retries=5,         # Max reconnection attempts
+)
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NUBDB_HOST` | `localhost` | Server hostname |
+| `NUBDB_PORT` | `6379` | Server port |
+
+```bash
+export NUBDB_HOST=db.nubcoder.com
+export NUBDB_PORT=6379
+```
+
+## API Reference
+
+### Connection
+
+| Method | Description |
+|--------|-------------|
+| `NubDB(host, port, ...)` | Create client and connect |
+| `db.connect()` | Reconnect to server |
+| `db.close()` | Close connection |
+| `db.ping()` | Check server is reachable |
+| `db.connected` | Connection status (property) |
+
+### Commands
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `db.set(key, value, ttl=None)` | `bool` | Set a key-value pair |
+| `db.get(key)` | `str \| None` | Get value by key |
+| `db.delete(key)` | `bool` | Delete a key |
+| `db.exists(key)` | `bool` | Check if key exists |
+| `db.incr(key)` | `int` | Increment integer value |
+| `db.decr(key)` | `int` | Decrement integer value |
+| `db.size()` | `int` | Get number of keys |
+| `db.clear()` | `bool` | Delete all keys |
+
+### Bulk Operations
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `db.mset({"k1": "v1", ...})` | `bool` | Set multiple key-value pairs |
+| `db.mget("k1", "k2", ...)` | `dict` | Get multiple keys at once |
+
+## Error Handling
+
+```python
+from nubdb import NubDB, ConnectionError, TimeoutError, CommandError
+
+try:
+    db = NubDB()
+    db.set("key", "value")
+except ConnectionError:
+    print("Could not connect to NubDB server")
+except TimeoutError:
+    print("Command timed out")
+except CommandError as e:
+    print(f"Command failed: {e}")
+```
+
+## Requirements
+
+- **Python 3.8+**
+- **Running NubDB server** ([setup guide](https://github.com/nub-coders/nubdt))
+- **Zero dependencies** — uses only Python standard library
+
+## NubDB Server
+
+NubDB is a high-performance, AOF-based in-memory database written in Zig:
+
+- **100k+ ops/sec** throughput
+- **<5µs** SET latency, **<1µs** GET latency
+- **AOF persistence** with background compaction
+- **Docker & Kubernetes** ready
+
+```bash
+# Start NubDB server with Docker
+docker run -d -p 6379:6379 nubdb:latest
+
+# Or build from source
+git clone https://github.com/nub-coders/nubdt.git
+cd nubdt && make server
+```
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
