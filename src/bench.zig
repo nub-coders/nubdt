@@ -166,13 +166,7 @@ fn benchmarkAOFReplay(allocator: std.mem.Allocator, num_ops: u64) !void {
     std.debug.print("Replaying AOF...\n", .{});
     const start = std.time.nanoTimestamp();
     
-    const ops_replayed = try aof2.replay(struct {
-        fn callback(op_type: @import("aof.zig").OpType, key: []const u8, value: []const u8) !void {
-            _ = op_type;
-            _ = key;
-            _ = value;
-        }
-    }.callback);
+    const ops_replayed = try aof2.replay(storage2, Storage.replayAOFEntry);
     
     const elapsed: i64 = @intCast(std.time.nanoTimestamp() - start);
     const elapsed_ms = @as(f64, @floatFromInt(elapsed)) / 1_000_000.0;

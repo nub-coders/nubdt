@@ -112,9 +112,7 @@ pub const AOF = struct {
         _ = self.ops_since_fsync.store(0, .monotonic);
     }
     
-    pub const ReplayCallback = *const fn (op_type: OpType, key: []const u8, value: []const u8) anyerror!void;
-    
-    pub fn replay(self: *AOF, callback: ReplayCallback) !u64 {
+    pub fn replay(self: *AOF, context: anytype, callback: anytype) !u64 {
         try self.file.seekTo(0);
         
         var buffered = std.io.bufferedReader(self.file.reader());
@@ -144,7 +142,7 @@ pub const AOF = struct {
             const value = value_buffer[0..value_len];
             try reader.readNoEof(value);
             
-            try callback(op_type, key, value);
+            try callback(context, op_type, key, value);
             ops_count += 1;
         }
         
