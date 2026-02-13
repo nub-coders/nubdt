@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nubdb"
+version = "1.0.0"
+description = "Python client for NubDB — a blazing-fast, AOF-based in-memory database written in Zig"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.8"
+authors = [
+    {name = "NubCoders"},
+]
+keywords = [
+    "nubdb",
+    "database",
+    "in-memory",
+    "key-value",
+    "cache",
+    "high-performance",
+    "zig",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/nub-coders/nubdt"
+Documentation = "https://nub-coders.github.io/nubdt/"
+Repository = "https://github.com/nub-coders/nubdt"
+Issues = "https://github.com/nub-coders/nubdt/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+nubdb = ["py.typed"]
