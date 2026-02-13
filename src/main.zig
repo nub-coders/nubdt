@@ -56,7 +56,7 @@ pub fn main() !void {
     try stdout.print("Replaying AOF log...\n", .{});
     const start_replay = std.time.nanoTimestamp();
     
-    const ops_replayed = aof.replay(replayCallback) catch |err| blk: {
+    const ops_replayed = aof.replay(storage, Storage.replayAOFEntry) catch |err| blk: {
         if (err == error.EndOfStream) break :blk 0;
         return err;
     };
@@ -247,12 +247,6 @@ fn printHelp() !void {
         \\For more information, see README.md
         \\
     , .{});
-}
-
-fn replayCallback(op_type: @import("aof.zig").OpType, key: []const u8, value: []const u8) !void {
-    _ = op_type;
-    _ = key;
-    _ = value;
 }
 
 fn compactionWorker(compaction: *Compaction, storage: *Storage) void {
