@@ -23,14 +23,15 @@ def execute_nubdb_batch(commands):
     
     try:
         # Execute NubDB with batch file
-        result = subprocess.run(
-            f'../zig-out/bin/nubdt < {batch_file}',
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=3,
-            cwd=os.path.dirname(__file__) or '.'
-        )
+        with open(batch_file, 'r') as bf:
+            result = subprocess.run(
+                ['../zig-out/bin/nubdt'],
+                stdin=bf,
+                capture_output=True,
+                text=True,
+                timeout=3,
+                cwd=os.path.dirname(__file__) or '.'
+            )
         
         # Parse output - filter out prompts and system messages
         responses = []
