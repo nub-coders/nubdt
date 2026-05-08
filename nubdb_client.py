@@ -7,7 +7,6 @@ Works with the existing NubDB binary without modifications.
 
 import subprocess
 import os
-import time
 from typing import Optional, Union
 
 
