@@ -141,6 +141,17 @@ fn handleClient(storage: *Storage, connection: std.net.Server.Connection, connec
             .size => {
                 writer.print("{d} keys\n", .{storage.size()}) catch break;
             },
+            .mget => {
+                var iter = std.mem.tokenizeAny(u8, trimmed, " \t\r\n");
+                _ = iter.next(); // Skip "mget"
+                while (iter.next()) |key| {
+                    if (storage.get(key)) |value| {
+                        writer.print("\"{s}\"\n", .{value}) catch break;
+                    } else {
+                        writer.writeAll("(nil)\n") catch break;
+                    }
+                }
+            },
             .clear => {
                 storage.clear();
                 writer.writeAll("OK\n") catch break;
