@@ -150,7 +150,7 @@ class NubDB:
         if self.file:
             try:
                 self.send_command('QUIT')
-            except:
+            except Exception:
                 pass
             self.file.close()
         if self.sock:
