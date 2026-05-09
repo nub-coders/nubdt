@@ -24,8 +24,6 @@ QUIT
 EOF
 
 # Run the database with test commands
-export PATH=$PATH:/root/nubdt/zig-linux-x86_64-0.13.0
-cd /root/nubdt
 ./zig-out/bin/nubdt < /tmp/nubdb_test.txt
 
 echo ""

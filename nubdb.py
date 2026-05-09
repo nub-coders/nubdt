@@ -202,7 +202,7 @@ class NubDB:
                 self.process.stdin.write("QUIT\n")
                 self.process.stdin.flush()
                 self.process.wait(timeout=2)
-            except:
+            except Exception:
                 self.process.terminate()
                 self.process.wait(timeout=1)
             finally:
