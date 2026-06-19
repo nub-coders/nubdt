@@ -155,9 +155,9 @@ class NubDB:
 
     # ── Command Execution ─────────────────────────────────────────
 
-    def _send_command(self, command: str) -> str:
+    def _send_command(self, command: str, num_lines: int = 1) -> Union[str, list]:
         """
-        Send a raw command string to the server and return the response.
+        Send a raw command string to the server and return the response(s).
 
         Handles auto-reconnect on connection loss.
         """
@@ -169,16 +169,18 @@ class NubDB:
 
         data = (command + "\n").encode("utf-8")
 
+        def _read_responses(n):
+            resps = []
+            for _ in range(n):
+                line = self._file.readline()
+                if not line:
+                    raise BrokenPipeError("Server closed connection")
+                resps.append(line.strip())
+            return resps[0] if n == 1 else resps
+
         try:
             self._sock.sendall(data)
-            
-            # Read line-buffered response
-            response = self._file.readline()
-            if not response:
-                 # EOF implies connection closed
-                raise BrokenPipeError("Server closed connection")
-                
-            return response.strip()
+            return _read_responses(num_lines)
             
         except socket.timeout as e:
             raise TimeoutError(f"Command timed out: {command}") from e
@@ -189,10 +191,7 @@ class NubDB:
                 # Retry once after reconnect
                 try:
                     self._sock.sendall(data)
-                    response = self._file.readline()
-                    if not response:
-                         raise ConnectionError("Server closed connection immediately after reconnect")
-                    return response.strip()
+                    return _read_responses(num_lines)
                 except OSError as retry_err:
                     raise ConnectionError(
                         f"Command failed after reconnect: {retry_err}"
@@ -231,6 +230,17 @@ class NubDB:
         response = self._send_command(cmd)
         return "OK" in response
 
+    def _parse_get_response(self, response: str) -> Optional[str]:
+        """Parse a GET or MGET line response."""
+        if not response or "(nil)" in response or "not found" in response.lower():
+            return None
+
+        # Strip quotes if present (NubDB returns "value")
+        if response.startswith('"') and response.endswith('"'):
+            return response[1:-1]
+
+        return response
+
     def get(self, key: str) -> Optional[str]:
         """
         Get the value of a key.
@@ -242,14 +252,7 @@ class NubDB:
             The value as a string, or None if the key doesn't exist.
         """
         response = self._send_command(f"GET {key}")
-        if not response or "(nil)" in response or "not found" in response.lower():
-            return None
-            
-        # Strip quotes if present (NubDB returns "value")
-        if response.startswith('"') and response.endswith('"'):
-            return response[1:-1]
-            
-        return response
+        return self._parse_get_response(response)
 
     def delete(self, key: str) -> bool:
         """
@@ -367,7 +370,19 @@ class NubDB:
         Returns:
             Dictionary mapping keys to their values (None if missing).
         """
-        return {key: self.get(key) for key in keys}
+        if not keys:
+            return {}
+
+        responses = self._send_command(f"MGET {' '.join(keys)}", num_lines=len(keys))
+
+        # If only one key was requested, responses is a single string
+        if len(keys) == 1:
+            return {keys[0]: self._parse_get_response(responses)}
+
+        return {
+            key: self._parse_get_response(resp)
+            for key, resp in zip(keys, responses)
+        }
 
     # ── Context Manager ───────────────────────────────────────────
 

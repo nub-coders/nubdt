@@ -9,6 +9,7 @@ pub const Command = enum {
     decr,
     size,
     clear,
+    mget,
     quit,
     unknown,
 };
@@ -19,6 +20,7 @@ pub fn parseCommand(line: []const u8) Command {
     
     if (std.ascii.eqlIgnoreCase(cmd, "set")) return .set;
     if (std.ascii.eqlIgnoreCase(cmd, "get")) return .get;
+    if (std.ascii.eqlIgnoreCase(cmd, "mget")) return .mget;
     if (std.ascii.eqlIgnoreCase(cmd, "del") or std.ascii.eqlIgnoreCase(cmd, "delete")) return .delete;
     if (std.ascii.eqlIgnoreCase(cmd, "exists")) return .exists;
     if (std.ascii.eqlIgnoreCase(cmd, "incr")) return .incr;
