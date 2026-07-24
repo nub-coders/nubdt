@@ -1,0 +1,18 @@
+FROM alpine:3.19
+
+RUN apk add --no-cache stunnel openssl
+
+# Generate self-signed certificate for development
+RUN mkdir -p /etc/stunnel/certs && \
+    openssl req -new -x509 -days 3650 -nodes \
+    -out /etc/stunnel/certs/server.pem \
+    -keyout /etc/stunnel/certs/server.key \
+    -subj "/C=US/ST=Cloud/L=NubDB/O=NubCoders/CN=db.nubcoder.com" && \
+    cat /etc/stunnel/certs/server.key /etc/stunnel/certs/server.pem > /etc/stunnel/certs/stunnel.pem && \
+    chmod 600 /etc/stunnel/certs/stunnel.pem
+
+COPY stunnel.conf /etc/stunnel/stunnel.conf
+
+EXPOSE 6380
+
+CMD ["stunnel", "/etc/stunnel/stunnel.conf"]

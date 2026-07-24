@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # NubDB Database
+  # ── NubDT Database Server ───────────────────────────────
   nubdb:
     build:
       context: .
@@ -19,51 +19,88 @@ services:
       - web
     environment:
       - TZ=UTC
-      - VIRTUAL_HOST=db.nubcoder.com
-      - VIRTUAL_PORT=6379
-      - VIRTUAL_PROTO=tcp
     healthcheck:
-      test: ["CMD", "sh", "-c", "echo SIZE | nc localhost 6379 || exit 1"]
-      interval: 30s
-      timeout: 3s
+      test: ["CMD", "sh", "-c", "echo SIZE | nc -w 1 localhost 6379 | grep -q keys"]
+      interval: 10s
+      timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 3s
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
-      - "maintainer=NubDB Team"
-      - "description=NubDB TCP Database Server"
+      - "maintainer=NubDT Team"
+      - "description=NubDT TCP Database Server"
 
-  # Documentation Website
-  nubdb-docs:
+  # ── NubDT TLS Proxy (stunnel) ───────────────────────────
+  nubdb-tls:
     build:
       context: .
-      dockerfile: Dockerfile.docs
-    image: nubdb-docs:latest
-    container_name: nubdb-docs
-    expose:
-      - "8000"
+      dockerfile: Dockerfile.tls
+    image: nubdb-tls:latest
+    container_name: nubdb-tls
+    ports:
+      - "6380:6380"
     restart: unless-stopped
     networks:
       - web
+    depends_on:
+      nubdb:
+        condition: service_healthy
     environment:
       - TZ=UTC
-      - VIRTUAL_HOST=nubdt.nubcoder.com
-      - VIRTUAL_PORT=8000
-      - LETSENCRYPT_HOST=nubdt.nubcoder.com
-      - LETSENCRYPT_EMAIL=admin@nubcoder.com
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
-      - "maintainer=NubDB Team"
-      - "description=NubDB Documentation Website"
+      - "maintainer=NubDT Team"
+      - "description=NubDT TLS Proxy (stunnel)"
+
+  # ── NubDT Web Console ──────────────────────────────────
+  nubdt-web:
+    build:
+      context: ./nubdb-web
+      dockerfile: Dockerfile
+    image: nubdt-web:latest
+    container_name: nubdt-web
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - web
+    depends_on:
+      nubdb:
+        condition: service_healthy
+    environment:
+      - TZ=UTC
+      - NODE_ENV=production
+      - DATABASE_URL=file:./prisma/prod.db
+      - NEXTAUTH_URL=https://console.nubcoder.com
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM:-NubDT <noreply@nubcoder.com>}
+      - VIRTUAL_HOST=console.nubcoder.com
+      - VIRTUAL_PORT=3000
+      - LETSENCRYPT_HOST=console.nubcoder.com
+      - LETSENCRYPT_EMAIL=admin@nubcoder.com
+    volumes:
+      - nubdt-web-data:/app/prisma
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "maintainer=NubDT Team"
+      - "description=NubDT Web Console (Next.js)"
 
 volumes:
   nubdb-data:
+    driver: local
+  nubdt-web-data:
     driver: local
 
 networks:

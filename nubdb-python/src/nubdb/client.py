@@ -2,14 +2,17 @@
 NubDB Python Client — TCP socket-based client.
 
 Connects to a running NubDB server over TCP. Supports all NubDB commands
-with automatic reconnection, context manager usage, and clean error handling.
+with automatic reconnection, context manager usage, SSL/TLS encryption,
+and clean error handling.
 """
 
 import os
+import ssl as _ssl
 import socket
 import time
 from typing import Optional, Union
 
+from urllib.parse import urlparse
 from .exceptions import ConnectionError, TimeoutError, CommandError
 
 
@@ -20,10 +23,13 @@ class NubDB:
     Connects over TCP to a running NubDB server instance.
 
     Args:
-        host: Server hostname. Defaults to NUBDB_HOST env var,
-              then 'localhost'.
-        port: Server port. Defaults to NUBDB_PORT env var,
-              then 6379.
+        host: Server hostname or connection string (nubdb:// or nubdbs://).
+              Defaults to NUBDB_HOST env var, then 'localhost'.
+        port: Server port. Defaults to NUBDB_PORT env var, then 6379.
+        ssl: Enable SSL/TLS encryption. Default False.
+             Automatically enabled when using nubdbs:// scheme.
+        ssl_verify: Verify SSL certificate. Default True.
+        ssl_ca_certs: Path to custom CA certificate file.
         timeout: Socket timeout in seconds. Default 5.0.
         auto_reconnect: Whether to automatically reconnect on
                         connection loss. Default True.
@@ -37,26 +43,62 @@ class NubDB:
         'Alice'
         >>> db.close()
 
-        >>> with NubDB(host="db.nubcoder.com") as db:
+        >>> with NubDB("nubdb://db.nubcoder.com:6379") as db:
         ...     db.set("counter", "100")
         ...     db.incr("counter")
         101
+
+        >>> db = NubDB("nubdbs://db.nubcoder.com:6380")  # TLS
     """
 
     DEFAULT_HOST = "localhost"
     DEFAULT_PORT = 6379
+    DEFAULT_TLS_PORT = 6380
     BUFFER_SIZE = 4096
 
     def __init__(
         self,
         host: Optional[str] = None,
         port: Optional[int] = None,
+        ssl: bool = False,
+        ssl_verify: bool = True,
+        ssl_ca_certs: Optional[str] = None,
         timeout: float = 5.0,
         auto_reconnect: bool = True,
         max_retries: int = 3,
     ):
-        self.host = host or os.getenv("NUBDB_HOST", self.DEFAULT_HOST)
-        self.port = port or int(os.getenv("NUBDB_PORT", str(self.DEFAULT_PORT)))
+        self._ssl_enabled = ssl
+        self._ssl_verify = ssl_verify
+        self._ssl_ca_certs = ssl_ca_certs
+
+        # Handle connection string if provided in host
+        if host and "://" in host:
+            parsed = urlparse(host)
+            scheme = parsed.scheme.lower()
+
+            if scheme == "nubdbs":
+                self._ssl_enabled = True
+                self.host = parsed.hostname or self.DEFAULT_HOST
+                self.port = parsed.port or self.DEFAULT_TLS_PORT
+            elif scheme == "nubdb":
+                self.host = parsed.hostname or self.DEFAULT_HOST
+                self.port = parsed.port or self.DEFAULT_PORT
+            else:
+                raise ValueError(
+                    f"Invalid scheme '{scheme}', expected 'nubdb' or 'nubdbs'"
+                )
+
+            # Allow port override if explicitly provided
+            if port is not None:
+                self.port = port
+        else:
+            self.host = host or os.getenv("NUBDB_HOST", self.DEFAULT_HOST)
+            self.port = port or int(os.getenv("NUBDB_PORT", str(self.DEFAULT_PORT)))
+
+            # Check env var for SSL
+            if os.getenv("NUBDB_SSL", "").lower() in ("1", "true", "yes"):
+                self._ssl_enabled = True
+
         self.timeout = timeout
         self.auto_reconnect = auto_reconnect
         self.max_retries = max_retries
@@ -74,14 +116,33 @@ class NubDB:
             return
 
         try:
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._sock.settimeout(self.timeout)
-            self._sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            raw_sock.settimeout(self.timeout)
+            raw_sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
+            if self._ssl_enabled:
+                ctx = _ssl.create_default_context()
+                if not self._ssl_verify:
+                    ctx.check_hostname = False
+                    ctx.verify_mode = _ssl.CERT_NONE
+                if self._ssl_ca_certs:
+                    ctx.load_verify_locations(self._ssl_ca_certs)
+                self._sock = ctx.wrap_socket(
+                    raw_sock, server_hostname=self.host
+                )
+            else:
+                self._sock = raw_sock
+
             self._sock.connect((self.host, self.port))
-            
+
             # Wrap socket file object for buffered line reading
             self._file = self._sock.makefile("r", encoding="utf-8")
             self._connected = True
+        except _ssl.SSLError as e:
+            self._cleanup_socket()
+            raise ConnectionError(
+                f"SSL/TLS handshake failed with {self.host}:{self.port}: {e}"
+            ) from e
         except socket.gaierror as e:
             self._cleanup_socket()
             raise ConnectionError(
@@ -112,7 +173,7 @@ class NubDB:
         try:
             self._send_command("SIZE")
             return True
-        except NubDBError:
+        except Exception:
             return False
 
     @property
@@ -120,10 +181,21 @@ class NubDB:
         """Whether the client is currently connected."""
         return self._connected
 
+    @property
+    def ssl_enabled(self) -> bool:
+        """Whether SSL/TLS is enabled for this connection."""
+        return self._ssl_enabled
+
+    @property
+    def connection_string(self) -> str:
+        """Return the connection string for this client."""
+        scheme = "nubdbs" if self._ssl_enabled else "nubdb"
+        return f"{scheme}://{self.host}:{self.port}"
+
     def _cleanup_socket(self) -> None:
         """Safely close and clean up the socket."""
         self._connected = False
-        
+
         # Close file handle first
         if hasattr(self, "_file") and self._file:
             try:
@@ -131,7 +203,7 @@ class NubDB:
             except OSError:
                 pass
             self._file = None
-            
+
         # Close socket
         if self._sock is not None:
             try:
@@ -147,7 +219,7 @@ class NubDB:
             try:
                 self.connect()
                 return
-            except NubDBError:
+            except Exception:
                 if attempt < self.max_retries:
                     time.sleep(0.1 * attempt)  # backoff
                 else:
@@ -171,15 +243,15 @@ class NubDB:
 
         try:
             self._sock.sendall(data)
-            
+
             # Read line-buffered response
             response = self._file.readline()
             if not response:
-                 # EOF implies connection closed
+                # EOF implies connection closed
                 raise BrokenPipeError("Server closed connection")
-                
+
             return response.strip()
-            
+
         except socket.timeout as e:
             raise TimeoutError(f"Command timed out: {command}") from e
         except (BrokenPipeError, OSError) as e:
@@ -191,7 +263,9 @@ class NubDB:
                     self._sock.sendall(data)
                     response = self._file.readline()
                     if not response:
-                         raise ConnectionError("Server closed connection immediately after reconnect")
+                        raise ConnectionError(
+                            "Server closed connection immediately after reconnect"
+                        )
                     return response.strip()
                 except OSError as retry_err:
                     raise ConnectionError(
@@ -218,14 +292,12 @@ class NubDB:
         Returns:
             True if the operation succeeded.
         """
-        # Quote strings to handle spaces properly
-        if isinstance(value, str):
-            # Basic escaping: minimal implementation as server expects raw or quoted
-            # NubDB protocol seems loose. Let's send raw unless it has spaces?
-            # Actually Protocol says quoted strings are values. 
-            pass 
-            
-        cmd = f"SET {key} {value}"
+        val = str(value)
+        # Quote strings that contain spaces
+        if " " in val:
+            val = f'"{val}"'
+
+        cmd = f"SET {key} {val}"
         if ttl is not None and ttl > 0:
             cmd += f" {ttl}"
         response = self._send_command(cmd)
@@ -244,11 +316,11 @@ class NubDB:
         response = self._send_command(f"GET {key}")
         if not response or "(nil)" in response or "not found" in response.lower():
             return None
-            
+
         # Strip quotes if present (NubDB returns "value")
         if response.startswith('"') and response.endswith('"'):
             return response[1:-1]
-            
+
         return response
 
     def delete(self, key: str) -> bool:
@@ -382,4 +454,5 @@ class NubDB:
 
     def __repr__(self) -> str:
         status = "connected" if self._connected else "disconnected"
-        return f"NubDB(host='{self.host}', port={self.port}, {status})"
+        tls = " ssl" if self._ssl_enabled else ""
+        return f"NubDB(host='{self.host}', port={self.port}, {status}{tls})"

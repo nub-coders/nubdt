@@ -17,3 +17,23 @@ bench_test.aof
 *.tmp
 __pycache__/
 *.pyc
+
+# Python envs / build artifacts
+.venv/
+*.egg-info/
+nubdb-python/build/
+nubdb-python/dist/
+
+# Secrets / local config
+.env
+ssl/
+.vscode/
+
+# Logs
+*.log
+
+# Vendored zig toolchain
+zig/
+
+# SQLite dev databases
+*.db
